@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CPU და ვიდეო ბარათი (GPU) — ინტერაქტიული გაკვეთილი</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E8ECF1;--panel:#FFFFFF;--panel2:#F3F5F8;--ink:#17202D;--muted:#566275;--line:#CBD3DE;
+  --cpu:#2E5CE6;--cpu-soft:#DCE4FF;--cpu-ink:#1E46C2;
+  --gpu:#D4950F;--gpu-soft:#FBEBC6;--gpu-ink:#8A5C00;
+  --hot:#D6336C;--sub:#3C6A54;--pcb:#22483A;--die:#56647B;--metal:#B3BDCA;--copper:#C27A3A;--gold:#D9A93B;
+  --cache:#A6B9F3;--shroud:#2A3341;--fanbg:#3A4556;--fan:#909DB1;--fin:#9AA6B6;
+  color-scheme:light;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#151C27;--panel:#1D2533;--panel2:#242E3E;--ink:#E6ECF4;--muted:#9AA7BA;--line:#334157;
+  --cpu:#6F92FF;--cpu-soft:#25345E;--cpu-ink:#9DB4FF;--gpu:#F0B43A;--gpu-soft:#4A3A16;--gpu-ink:#F6C760;
+  --hot:#FF5C8D;--sub:#2F5444;--pcb:#1B3A2F;--die:#46536A;--metal:#7A8699;--cache:#3E5390;
+  --shroud:#0F141C;--fanbg:#2A3445;--fan:#6C7A90;--fin:#5E6A7C;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151C27;--panel:#1D2533;--panel2:#242E3E;--ink:#E6ECF4;--muted:#9AA7BA;--line:#334157;
+  --cpu:#6F92FF;--cpu-soft:#25345E;--cpu-ink:#9DB4FF;--gpu:#F0B43A;--gpu-soft:#4A3A16;--gpu-ink:#F6C760;
+  --hot:#FF5C8D;--sub:#2F5444;--pcb:#1B3A2F;--die:#46536A;--metal:#7A8699;--cache:#3E5390;
+  --shroud:#0F141C;--fanbg:#2A3445;--fan:#6C7A90;--fin:#5E6A7C;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans Georgian","Sylfaen","BPG Arial",system-ui,sans-serif;font-size:17px;line-height:1.6;display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit}
+.top{display:flex;align-items:center;gap:14px;padding:10px clamp(14px,3vw,36px);border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{font-weight:900;letter-spacing:-.01em;white-space:nowrap}
+.brand i{font-style:normal;color:var(--cpu-ink)}.brand em{font-style:normal;color:var(--gpu-ink)}
+.prog{flex:1;height:6px;background:var(--panel2);border-radius:6px;overflow:hidden;min-width:60px}
+.prog b{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cpu),var(--gpu));transition:width .3s}
+.ib{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.ib:hover{border-color:var(--ink)}
+:focus-visible{outline:3px solid var(--hot);outline-offset:2px}
+main{flex:1;position:relative;min-height:0}
+.slide{position:absolute;inset:0;overflow-y:auto;padding:clamp(18px,3vw,40px) clamp(16px,4vw,56px) 40px;display:none}
+.slide.active{display:block;animation:sin .35s ease}
+@keyframes sin{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.slide.active{animation:none}*{transition:none!important}}
+.sh{display:flex;gap:10px;align-items:center;margin-bottom:6px;color:var(--muted);font-weight:700;font-size:.95rem}
+.tag{padding:2px 10px;border-radius:20px;font-size:.85rem;font-weight:800}
+.tag.cpu{background:var(--cpu-soft);color:var(--cpu-ink)}.tag.gpu{background:var(--gpu-soft);color:var(--gpu-ink)}
+.tag.both{background:var(--panel2);border:1px solid var(--line)}
+h1,h2,h3{line-height:1.15;margin:0 0 .4em;letter-spacing:-.01em}
+h2{font-size:clamp(28px,3.6vw,50px);font-weight:900}
+h3{font-size:1.2rem;font-weight:800;margin-top:1em}
+.lead{font-size:1.15rem;color:var(--muted);max-width:62ch;margin:0 0 1em}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(18px,3vw,44px);align-items:start}
+.grid.even{grid-template-columns:1fr 1fr}
+@media (max-width:900px){.grid,.grid.even{grid-template-columns:1fr}body{font-size:16px}}
+.txt p{max-width:62ch;margin:.4em 0 .8em}
+.txt ul{padding:0;margin:.3em 0 1em;list-style:none}
+.txt li{position:relative;padding-left:22px;margin:.25em 0}
+.txt li::before{content:"";position:absolute;left:2px;top:.62em;width:9px;height:9px;border-radius:2px;background:var(--cpu)}
+.gpuS .txt li::before{background:var(--gpu)}
+.note{border:1px dashed var(--line);border-radius:12px;padding:10px 14px;background:var(--panel2);margin:1em 0}
+.note b{color:var(--hot)}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:clamp(10px,1.6vw,18px)}
+.fig svg{width:100%;height:auto;display:block;overflow:visible;max-height:56vh}
+.hint{font-size:.85rem;color:var(--muted);margin:0 0 8px}
+.cap{margin-top:12px;border-left:4px solid var(--hot);padding:10px 14px;background:var(--panel2);border-radius:0 10px 10px 0;min-height:84px}
+.cap b{display:block;font-size:1.12rem;margin-bottom:2px}.cap span{color:var(--muted)}
+.hs{cursor:pointer;transition:opacity .15s,filter .15s}
+.fig.act .hs:not(.on):not(:has(.on)){opacity:.42}
+.hs.on{filter:drop-shadow(0 0 5px var(--hot))}
+.hs.on>.ol,.hs.on>rect.o,.hs.on>.o{stroke:var(--hot)!important;stroke-width:3}
+svg text{font-family:inherit;fill:var(--ink);font-size:14px}
+svg .lw{fill:#fff;font-weight:700}svg .lb{font-weight:700}svg .sm{font-size:12px}svg .mu{fill:var(--muted)}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--bg);font-weight:700;font-size:14px;padding:6px 10px;border-radius:8px;opacity:0;transform:translate(14px,14px);transition:opacity .12s;max-width:260px}
+#tip.show{opacity:1}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{background:var(--panel2);font-weight:800}
+.tw{overflow-x:auto;max-width:100%}
+td.hs,th.hs{text-decoration:underline dotted var(--muted);text-underline-offset:4px}
+.nav{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--panel)}
+.nav .big{min-width:120px;font-weight:800;padding:9px 16px;border-radius:12px;border:none;background:var(--ink);color:var(--bg);cursor:pointer}
+.nav .big:disabled{opacity:.3;cursor:default}
+#cnt{font-weight:800;min-width:72px;text-align:center}
+.toc{position:fixed;inset:0;z-index:40;background:rgba(10,14,22,.55);display:none;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 20px}
+.toc.open{display:block}
+.toc>div{max-width:820px;margin:0 auto;background:var(--panel);border-radius:18px;padding:20px;max-height:100%;overflow:auto}
+.toc ol{columns:2 280px;padding-left:1.6em;margin:0}.toc li{margin:.2em 0;break-inside:avoid}
+.toc a{color:var(--ink);text-decoration:none}.toc a:hover{color:var(--hot)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:.5em 0 1em}
+.chip{border:1px solid var(--line);border-radius:30px;padding:5px 14px;background:var(--panel);font-weight:700}
+.chip.hs:hover,.chip.hs.on{border-color:var(--hot)}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:600px){.cols2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.card h3{margin-top:0}
+.cpuB{border-top:5px solid var(--cpu)}.gpuB{border-top:5px solid var(--gpu)}
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:30px;align-items:center;min-height:100%}
+@media (max-width:900px){.hero{grid-template-columns:1fr}}
+.hero h1{font-size:clamp(36px,5vw,72px);font-weight:900;letter-spacing:-.03em;line-height:1}
+.hero h1 .c{color:var(--cpu)}.hero h1 .g{color:var(--gpu)}
+.hero h1 small{display:block;font-size:.36em;letter-spacing:0;color:var(--muted);font-weight:700;margin-top:.5em}
+.start{display:inline-block;margin-top:18px;background:var(--ink);color:var(--bg);border:none;border-radius:14px;padding:12px 22px;font-weight:800;cursor:pointer;font-size:1.05rem}
+/* chain */
+.chain{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:1em 0;counter-reset:c}
+.chain>div{flex:1 1 140px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;position:relative;counter-increment:c}
+.chain>div::before{content:counter(c);display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--bg);font-weight:800;margin-bottom:6px}
+.chain>div b{display:block}
+details{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 16px;margin:.6em 0}
+summary{cursor:pointer;font-weight:800}
+details ol{columns:2 300px;margin:.6em 0}
+/* decoder */
+.dec{display:flex;flex-wrap:wrap;gap:6px;font-size:clamp(26px,4vw,52px);font-weight:900;margin:.2em 0 .6em}
+.dec span{padding:4px 12px;border-radius:12px;border:2px solid var(--line);background:var(--panel)}
+.dec span.on{border-color:var(--hot)}
+/* ladders */
+.lad .row{display:flex;align-items:center;gap:10px;margin:7px 0;padding:4px;border-radius:10px}
+.lad .row i{display:block;height:28px;border-radius:7px;flex:none}
+.lad .row b{white-space:nowrap}
+/* scale bars */
+.sbar{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;margin:8px 0;padding:3px;border-radius:8px}
+.sbar i{display:block;height:22px;border-radius:6px;background:var(--cpu)}
+/* sliders */
+.ctl{display:grid;gap:12px;margin:10px 0}
+.ctl label{display:grid;gap:4px;font-weight:700}
+input[type=range]{width:100%;accent-color:var(--hot)}
+.meter{height:30px;border-radius:8px;background:var(--panel2);overflow:hidden;position:relative;border:1px solid var(--line)}
+.meter i{display:block;height:100%;transition:width .25s}
+.meter span{position:absolute;inset:0;display:flex;align-items:center;padding-left:10px;font-weight:800;font-size:.9rem}
+.big-num{font-size:clamp(34px,5vw,60px);font-weight:900;line-height:1}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.seg button{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:7px 14px;cursor:pointer;font-weight:700}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+/* flip cards */
+.flips{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.flip{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;min-height:130px;text-align:left}
+.flip .a{display:none;color:var(--muted);margin-top:8px}
+.flip[aria-expanded=true]{border-color:var(--hot)}.flip[aria-expanded=true] .a{display:block}
+.flip .q{font-weight:800}
+.chk label{display:flex;gap:8px;align-items:flex-start;margin:4px 0}
+.chk input{accent-color:var(--hot);margin-top:6px}
+.quote{font-size:clamp(20px,2.4vw,30px);font-weight:800;line-height:1.35;border-left:6px solid var(--gpu);padding:8px 0 8px 20px;max-width:46ch;margin:1em 0}
+.track{position:relative;height:44px;background:var(--panel2);border-radius:10px;margin:6px 0 14px;border:1px solid var(--line);overflow:hidden}
+.track .ball{position:absolute;top:8px;left:0;width:28px;height:28px;border-radius:50%;background:var(--gpu)}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.flow .card{flex:1 1 160px}
+
+.wrap{flex:1;display:flex;min-height:0;position:relative}
+.wrap main{flex:1;min-width:0}
+#side{width:290px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:14px 10px 24px}
+body.noside #side{display:none}
+#side h4{margin:14px 10px 6px;font-size:.82rem;color:var(--muted);font-weight:800;display:flex;align-items:center;gap:8px}
+#side h4::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--c,var(--muted))}
+#side a{display:flex;gap:10px;align-items:baseline;padding:7px 10px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:.93rem;line-height:1.35;border-left:3px solid transparent}
+#side a span{color:var(--muted);font-weight:800;font-size:.8rem;min-width:20px}
+#side a:hover{background:var(--panel2)}
+#side a.cur{background:var(--panel2);border-left-color:var(--hot);font-weight:800}
+#side a.cur span{color:var(--hot)}
+#side a.seen span{color:var(--ink)}
+.scrim{display:none}
+@media (max-width:1000px){
+ #side{position:absolute;left:0;top:0;bottom:0;z-index:30;transform:translateX(-100%);transition:transform .25s;box-shadow:0 0 30px rgba(0,0,0,.25);display:block!important}
+ body.sideopen #side{transform:none}
+ body.sideopen .scrim{display:block;position:absolute;inset:0;z-index:29;background:rgba(10,14,22,.45)}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <defs>
+  <symbol id="fan" viewBox="-50 -50 100 100">
+   <circle r="48" fill="var(--fanbg)" stroke="var(--fan)" stroke-width="2"/>
+   <g fill="var(--fan)">
+    <path id="bl" d="M0-12C16-18 30-34 14-45C6-32-2-22 0-12Z"/>
+    <use href="#bl" transform="rotate(51)"/><use href="#bl" transform="rotate(103)"/><use href="#bl" transform="rotate(154)"/>
+    <use href="#bl" transform="rotate(206)"/><use href="#bl" transform="rotate(257)"/><use href="#bl" transform="rotate(309)"/>
+   </g>
+   <circle r="12" fill="var(--shroud)" stroke="var(--fan)" stroke-width="2"/>
+  </symbol>
+  <pattern id="pins" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="4.5" cy="4.5" r="2.4" fill="var(--gold)"/></pattern>
+  <pattern id="fins" width="8" height="10" patternUnits="userSpaceOnUse"><rect width="3" height="10" fill="var(--fin)"/></pattern>
+  <pattern id="hfins" width="10" height="7" patternUnits="userSpaceOnUse"><rect width="10" height="3" fill="var(--fin)"/></pattern>
+  <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="var(--muted)"/></marker>
+  <marker id="arh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="var(--hot)"/></marker>
+  <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="var(--gpu)"/></marker>
+ </defs>
+</svg>
+<div class="top">
+ <div class="brand"><i>CPU</i> და <em>GPU</em></div>
+ <div class="prog"><b id="bar"></b></div>
+ <button class="ib" id="tocBtn" aria-label="სარჩევი">☰ მენიუ</button>
+ <button class="ib" id="themeBtn" aria-label="თემის შეცვლა">◐</button>
+ <button class="ib" id="fsBtn" aria-label="სრული ეკრანი">⛶</button>
+</div>
+<div class="wrap">
+<aside id="side" aria-label="სლაიდების ჩამონათვალი"></aside>
+<div class="scrim" id="scrim"></div>
+<main id="deck">
+<!-- 1 HERO -->
+<section class="slide" data-sec="both" data-title="თემის შესავალი">
+ <div class="hero">
+  <div>
+   <h1><span class="c">CPU</span> და <span class="g">ვიდეო ბარათი</span><small>კომპიუტერის ორი უმნიშვნელოვანესი კომპონენტი — დანიშნულება, მუშაობის პრინციპი და ტექნიკური მახასიათებლები</small></h1>
+   <p class="lead">ამ გაკვეთილზე განვიხილავთ CPU-ს (Central Processing Unit) და GPU-ს (Graphics Processing Unit), მათ ნაწილებს და ერთმანეთისგან განსხვავებას.</p>
+   <div class="note">ყველა ილუსტრაცია ინტერაქტიულია: <b>მიიტანეთ მაუსი</b> ნებისმიერ ნაწილზე (ტელეფონზე — შეეხეთ) და ქვემოთ გამოჩნდება მისი სახელი და განმარტება.</div>
+   <button class="start" data-go="1">გაკვეთილის დაწყება</button>
+  </div>
+  <div class="fig">
+   <svg viewBox="0 0 700 340" role="img" aria-label="პროცესორი და ვიდეო ბარათი">
+    <g class="hs" data-t="CPU — პროცესორი" data-d="ცენტრალური დამამუშავებელი მოწყობილობა. ასრულებს პროგრამების ინსტრუქციებს, გამოთვლებს და ლოგიკურ ოპერაციებს. მას კომპიუტერის „ტვინს“ უწოდებენ.">
+     <rect class="o" x="20" y="40" width="260" height="260" rx="14" fill="var(--sub)" stroke="var(--line)"/>
+     <rect x="30" y="50" width="240" height="240" rx="8" fill="url(#pins)" opacity=".5"/>
+     <rect x="60" y="80" width="180" height="180" rx="12" fill="var(--metal)" stroke="var(--ink)" stroke-opacity=".25"/>
+     <text x="150" y="168" text-anchor="middle" style="font-size:40px;font-weight:900;fill:var(--shroud)">CPU</text>
+     <text x="150" y="196" text-anchor="middle" class="sm" style="fill:var(--shroud)">პროცესორი</text>
+    </g>
+    <g class="hs" data-t="ვიდეო ბარათი" data-d="ცალკე მოწყობილობა, რომელიც შეიცავს GPU-ს (გრაფიკულ პროცესორს), ვიდეომეხსიერებას, გაგრილებას, კვების ნაწილს და ვიდეო გამოსასვლელებს.">
+     <rect class="o" x="330" y="90" width="350" height="160" rx="16" fill="var(--shroud)"/>
+     <use href="#fan" x="355" y="110" width="120" height="120"/>
+     <use href="#fan" x="495" y="110" width="120" height="120"/>
+     <text x="640" y="176" text-anchor="middle" class="lw" style="font-size:22px">GPU</text>
+    </g>
+    <g class="hs" data-t="PCIe კონტაქტი" data-d="ოქროსფერი კონტაქტები, რომლითაც ვიდეო ბარათი დედაპლატის PCIe x16 სლოტში ჯდება. ამ გზით ცვლის მონაცემებს CPU-სთან და იღებს 75W-მდე კვებას.">
+     <rect class="o" x="380" y="250" width="200" height="16" fill="var(--gold)"/>
+    </g>
+    <g class="hs" data-t="სამაგრი (Bracket) და პორტები" data-d="მეტალის სამაგრი, რომელზეც განთავსებულია ვიდეო გამოსასვლელები — HDMI და DisplayPort. აქ ერთდება მონიტორი.">
+     <rect class="o" x="316" y="80" width="12" height="190" rx="2" fill="var(--metal)"/>
+    </g>
+    <text x="150" y="330" text-anchor="middle" class="lb">CPU</text>
+    <text x="505" y="300" text-anchor="middle" class="lb">ვიდეო ბარათი (შიგნით GPU)</text>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი ნაწილზე</b><span>აქ გამოჩნდება განმარტება.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 2 GOALS -->
+<section class="slide" data-sec="both" data-title="გაკვეთილის მიზნები">
+ <div class="sh"><span class="no"></span><span class="tag both">მიზნები</span></div>
+ <h2>რას ვისწავლით</h2>
+ <p class="lead">გაკვეთილის მიზანია, მოსწავლემ გაიგოს CPU-სა და GPU-ს დანიშნულება, მუშაობის პრინციპი და მახასიათებლები, შეძლოს მათი შედარება და კონკრეტული მომხმარებლისთვის სწორი კომპონენტის შერჩევა.</p>
+ <h3>საბოლოო კომპეტენცია — ნაბიჯ-ნაბიჯ</h3>
+ <div class="chain">
+  <div><b>ამოცნობა</b>CPU/GPU-ის ამოცნობა</div>
+  <div><b>წაკითხვა</b>ტექნიკური მახასიათებლების წაკითხვა</div>
+  <div><b>შედარება</b>მონაცემების შედარება</div>
+  <div><b>საჭიროება</b>მომხმარებლის საჭიროების განსაზღვრა</div>
+  <div><b>შერჩევა</b>შესაბამისი კომპონენტის შერჩევა</div>
+  <div><b>დასაბუთება</b>არჩევანის დასაბუთება</div>
+ </div>
+ <div class="cols2">
+  <div class="card cpuB"><h3>თეორია და გაგება</h3>მოსწავლე განმარტავს CPU-ს და GPU-ს, იცის Core, Thread, Clock Speed, Cache, Architecture, TDP, Resolution და Refresh Rate; ხსნის, რატომ არის მნიშვნელოვანი ბირთვები, სიხშირე და L1/L2/L3 Cache, და როგორ ურთიერთქმედებენ CPU და GPU.</div>
+  <div class="card gpuB"><h3>პრაქტიკა და ანალიზი</h3>მოიძიებს და წაიკითხავს ტექნიკურ მონაცემებს, შეადარებს ორ CPU-ს და ორ GPU-ს, განსაზღვრავს საჭირო წარმადობას და დაასაბუთებს, რატომ არის კონკრეტული კომპონენტი უკეთესი კონკრეტული მომხმარებლისთვის.</div>
+ </div>
+ <details><summary>36 კონკრეტული მიზანი (გახსნა)</summary>
+ <ol>
+  <li>ახსნას, რა არის CPU</li><li>ახსნას, რა არის GPU</li><li>აღწეროს CPU-ის დანიშნულება</li><li>აღწეროს GPU-ის დანიშნულება</li><li>განასხვავოს CPU-ისა და GPU-ის ფუნქციები</li><li>განმარტოს Core და Thread</li><li>განმარტოს Clock Speed</li><li>განასხვავოს Base და Boost Clock</li><li>ახსნას CPU Cache</li><li>განასხვავოს L1, L2, L3</li><li>ახსნას CPU Architecture</li><li>განმარტოს nm</li><li>ახსნას TDP</li><li>აღწეროს გაგრილების საჭიროება</li><li>ახსნას iGPU</li><li>განასხვავოს Integrated და Dedicated GPU</li><li>აღწეროს ვიდეო ბარათის ნაწილები</li><li>ახსნას GPU Architecture</li><li>გაიგოს პარალელური გამოთვლები</li><li>ახსნას Ray Tracing</li><li>GPU და ხელოვნური ინტელექტი</li><li>ვიდეო ბარათის გაგრილება</li><li>ვიდეო ბარათის კვება</li><li>ენერგომოხმარება</li><li>HDMI და DisplayPort</li><li>Resolution</li><li>Refresh Rate</li><li>CPU და GPU შედარება</li><li>ერთობლივი მუშაობა</li><li>Bottleneck</li><li>CPU მახასიათებლების წაკითხვა</li><li>GPU მახასიათებლების წაკითხვა</li><li>ორი CPU-ის შედარება</li><li>ორი GPU-ის შედარება</li><li>შერჩევა ამოცანისთვის</li><li>არჩევანის დასაბუთება</li>
+ </ol></details>
+</section>
+
+<!-- 3 WHAT IS CPU -->
+<section class="slide" data-sec="cpu" data-title="რა არის CPU?">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>რა არის CPU?</h2>
+ <div class="grid">
+  <div class="txt">
+   <p><b>CPU (Central Processing Unit)</b> — კომპიუტერის ცენტრალური დამამუშავებელი მოწყობილობა. ქართულად — <b>პროცესორი</b>. ასრულებს პროგრამების მიერ მოთხოვნილ გამოთვლით და ლოგიკურ ოპერაციებს.</p>
+   <ul>
+    <li>პროგრამების გაშვება</li><li>ოპერაციული სისტემის მუშაობა</li><li>ფაილების დამუშავება და გამოთვლები</li><li>ინსტრუქციების შესრულება</li><li>სხვა მოწყობილობების მუშაობის მართვა</li>
+   </ul>
+   <div class="note">CPU შეგვიძლია წარმოვიდგინოთ როგორც კომპიუტერის ერთ-ერთი მთავარი <b>„ტვინი“</b>.</div>
+  </div>
+  <div class="fig">
+   <p class="hint">პროცესორი „შიგნიდან“ — მეტალის თავსახური მოხსნილია</p>
+   <svg viewBox="0 0 600 430" role="img" aria-label="პროცესორის აგებულება">
+    <g class="hs" data-t="სუბსტრატი (ფუძე)" data-d="მწვანე მრავალშრიანი დაფა, რომელზეც კრისტალი დგას. ის კრისტალის მიკროსკოპულ კონტაქტებს აკავშირებს ქვედა მხარის კონტაქტებთან.">
+     <rect class="o" x="30" y="20" width="540" height="390" rx="14" fill="var(--sub)" stroke="var(--line)"/></g>
+    <g class="hs" data-t="IHS — მეტალის თავსახური" data-d="Integrated Heat Spreader — მეტალის საფარი, რომელიც იცავს კრისტალს და სითბოს თანაბრად გადასცემს გამაგრილებელს. აქ ის მოხსნილია (წყვეტილი ხაზი).">
+     <rect class="o" x="62" y="48" width="476" height="312" rx="12" fill="none" stroke="var(--metal)" stroke-width="3" stroke-dasharray="10 7"/>
+     <text x="300" y="40" text-anchor="middle" class="lw sm">IHS (მოხსნილი)</text></g>
+    <g class="hs" data-t="კრისტალი (Die)" data-d="სილიციუმის პატარა ფირფიტა, რომელზეც მილიარდობით ტრანზისტორია. აქ არის ბირთვები, Cache, მეხსიერების კონტროლერი და ზოგჯერ iGPU.">
+     <rect class="o" x="100" y="78" width="400" height="262" rx="6" fill="var(--die)"/></g>
+    <g class="hs" data-t="L3 Cache — საერთო" data-d="ყველა ბირთვისთვის საერთო, ყველაზე დიდი Cache. ამცირებს RAM-ზე ხშირ მიმართვას.">
+     <rect class="o" x="115" y="174" width="240" height="64" rx="4" fill="var(--cache)"/>
+     <text x="235" y="211" text-anchor="middle" class="lb">L3 Cache</text></g>
+    <g id="coresA"></g>
+    <g class="hs" data-t="iGPU — ჩაშენებული გრაფიკა" data-d="ზოგ პროცესორში ჩაშენებული გრაფიკული ბლოკი. საკმარისია ოფისის, ინტერნეტის, ვიდეოს და მსუბუქი სამუშაოებისთვის.">
+     <rect class="o" x="368" y="94" width="118" height="144" rx="4" fill="var(--gpu-soft)" stroke="var(--gpu)" stroke-width="2"/>
+     <text x="427" y="171" text-anchor="middle" class="lb">iGPU</text></g>
+    <g class="hs" data-t="მეხსიერების კონტროლერი" data-d="მართავს მონაცემთა გაცვლას ოპერატიულ მეხსიერებასთან (RAM).">
+     <rect class="o" x="368" y="248" width="118" height="38" rx="4" fill="var(--metal)"/>
+     <text x="427" y="272" text-anchor="middle" class="sm lb" style="fill:var(--shroud)">RAM კონტრ.</text></g>
+    <g class="hs" data-t="I/O და PCIe" data-d="შემავალ-გამომავალი ბლოკი: აკავშირებს CPU-ს ვიდეო ბარათთან (PCIe), SSD-სთან და დედაპლატის ჩიპსეტთან.">
+     <rect class="o" x="368" y="294" width="118" height="34" rx="4" fill="var(--metal)"/>
+     <text x="427" y="316" text-anchor="middle" class="sm lb" style="fill:var(--shroud)">I/O · PCIe</text></g>
+    <g class="hs" data-t="SMD კონდენსატორები" data-d="პატარა ელექტრონული ელემენტები სუბსტრატზე — ასტაბილურებენ კვების ძაბვას.">
+     <g fill="var(--metal)"><rect class="o" x="150" y="366" width="14" height="8"/><rect x="175" y="366" width="14" height="8"/><rect x="200" y="366" width="14" height="8"/><rect x="380" y="366" width="14" height="8"/><rect x="405" y="366" width="14" height="8"/><rect x="430" y="366" width="14" height="8"/></g></g>
+    <g class="hs" data-t="კონტაქტები და Socket" data-d="ქვედა მხარეს ასობით კონტაქტია, რომლითაც პროცესორი დედაპლატის Socket-ში (ბუდეში) ჯდება — მაგ. Intel LGA1700, AMD AM5. Socket და დედაპლატა თავსებადი უნდა იყოს.">
+     <rect class="o" x="60" y="384" width="480" height="18" fill="url(#pins)"/></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი ნაწილზე</b><span>ბირთვები, Cache, iGPU, კონტაქტები…</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 4 CPU PURPOSE -->
+<section class="slide" data-sec="cpu" data-title="CPU-ის მთავარი დანიშნულება">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>როგორ მუშაობს პროცესორი</h2>
+ <div class="grid">
+  <div class="txt">
+   <p>CPU იღებს ინსტრუქციებს, ამუშავებს მათ და წარმოქმნის შედეგს. როცა პროგრამას ხსნით, ტექსტს წერთ, ბრაუზერს ან თამაშს იყენებთ — პროცესორი ამისთვის საჭირო <b>უამრავ ოპერაციას</b> ასრულებს, წამში მილიარდობით ციკლით.</p>
+   <h3>წარმადობაზე მოქმედებს</h3>
+   <div class="chips"><span class="chip">ბირთვები</span><span class="chip">ნაკადები</span><span class="chip">სიხშირე</span><span class="chip">Cache</span><span class="chip">არქიტექტურა</span><span class="chip">nm</span><span class="chip">TDP</span></div>
+  </div>
+  <div class="fig">
+   <p class="hint">ინსტრუქციის ციკლი — მეორდება მილიარდჯერ წამში</p>
+   <svg viewBox="0 0 600 400" role="img" aria-label="ინსტრუქციის ციკლი">
+    <g fill="none" stroke="var(--muted)" stroke-width="2.5" marker-end="url(#ar)">
+     <path d="M372 92 Q450 110 462 160"/><path d="M462 222 Q450 290 372 302"/><path d="M228 302 Q150 290 138 222"/><path d="M138 160 Q150 110 228 92"/>
+     <path d="M150 48 L225 66"/><path d="M372 330 L440 352"/>
+    </g>
+    <circle cx="300" cy="196" r="62" fill="var(--cpu-soft)" stroke="var(--cpu)" stroke-width="2"/>
+    <text x="300" y="192" text-anchor="middle" class="lb">CPU</text><text x="300" y="212" text-anchor="middle" class="sm mu">ბირთვი</text>
+    <g class="hs" data-t="1. Fetch — ამოღება" data-d="პროცესორი მეხსიერებიდან (Cache-დან ან RAM-იდან) იღებს შემდეგ ინსტრუქციას.">
+     <rect class="o" x="228" y="66" width="144" height="52" rx="12" fill="var(--panel)" stroke="var(--cpu)" stroke-width="2"/><text x="300" y="98" text-anchor="middle" class="lb">1 · Fetch</text></g>
+    <g class="hs" data-t="2. Decode — გაშიფვრა" data-d="ინსტრუქცია იშიფრება: რა ოპერაციაა საჭირო (შეკრება, შედარება, ჩაწერა…) და რომელ მონაცემებზე.">
+     <rect class="o" x="400" y="165" width="144" height="52" rx="12" fill="var(--panel)" stroke="var(--cpu)" stroke-width="2"/><text x="472" y="197" text-anchor="middle" class="lb">2 · Decode</text></g>
+    <g class="hs" data-t="3. Execute — შესრულება" data-d="არითმეტიკულ-ლოგიკური ბლოკი (ALU) ასრულებს გამოთვლას ან ლოგიკურ ოპერაციას.">
+     <rect class="o" x="228" y="276" width="144" height="52" rx="12" fill="var(--panel)" stroke="var(--cpu)" stroke-width="2"/><text x="300" y="308" text-anchor="middle" class="lb">3 · Execute</text></g>
+    <g class="hs" data-t="4. Write back — ჩაწერა" data-d="შედეგი იწერება რეგისტრში ან მეხსიერებაში. შემდეგ ციკლი თავიდან იწყება.">
+     <rect class="o" x="56" y="165" width="144" height="52" rx="12" fill="var(--panel)" stroke="var(--cpu)" stroke-width="2"/><text x="128" y="197" text-anchor="middle" class="lb">4 · Write</text></g>
+    <g class="hs" data-t="პროგრამა / RAM" data-d="პროგრამის ინსტრუქციები და მონაცემები ინახება ოპერატიულ მეხსიერებაში, საიდანაც CPU მათ იღებს.">
+     <rect class="o" x="10" y="14" width="140" height="48" rx="10" fill="var(--panel2)" stroke="var(--line)"/><text x="80" y="44" text-anchor="middle" class="lb">პროგრამა/RAM</text></g>
+    <g class="hs" data-t="შედეგი" data-d="ოპერაციის შედეგი: ეკრანზე გამოსახულება, შენახული ფაილი, გაშვებული პროგრამა, ბრძანება სხვა მოწყობილობას.">
+     <rect class="o" x="440" y="334" width="150" height="48" rx="10" fill="var(--panel2)" stroke="var(--line)"/><text x="515" y="364" text-anchor="middle" class="lb">შედეგი</text></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი ეტაპზე</b><span>Fetch → Decode → Execute → Write</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 5 SPECS -->
+<section class="slide" data-sec="cpu" data-title="CPU-ის ტექნიკური მახასიათებლები">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>როგორ წავიკითხოთ CPU-ის მონაცემები</h2>
+ <p class="lead">ორი რეალური პროცესორის მონაცემები. მიიტანეთ მაუსი მარცხენა სვეტის ტერმინზე. <b>მხოლოდ ერთი მახასიათებლით პროცესორის შეფასება არასწორია.</b></p>
+ <div class="grid">
+  <div class="fig tw">
+   <table>
+    <thead><tr><th>მახასიათებელი</th><th>Intel Core i5-12400</th><th>AMD Ryzen 5 5600</th></tr></thead>
+    <tbody>
+     <tr><th class="hs" data-t="მწარმოებელი" data-d="კომპანია, რომელიც პროცესორს ქმნის. ძირითადი — Intel და AMD.">მწარმოებელი</th><td>Intel</td><td>AMD</td></tr>
+     <tr><th class="hs" data-t="თაობა" data-d="პროდუქციის ხაზის ვერსია. ახალი თაობა ხშირად აუმჯობესებს არქიტექტურას და ეფექტურობას, მაგრამ ავტომატურად არ ნიშნავს, რომ უკეთესია.">თაობა</th><td>მე-12 (Alder Lake)</td><td>Ryzen 5000</td></tr>
+     <tr><th class="hs" data-t="Core — ბირთვები" data-d="დამოუკიდებელი დამამუშავებელი ერთეულები. მეტი ბირთვი = მეტი ამოცანა პარალელურად.">ბირთვები</th><td>6</td><td>6</td></tr>
+     <tr><th class="hs" data-t="Thread — ნაკადები" data-d="ლოგიკური დამუშავების ნაკადები. 6/12 ნიშნავს: 6 ფიზიკური ბირთვი, 12 ნაკადი.">ნაკადები</th><td>12</td><td>12</td></tr>
+     <tr><th class="hs" data-t="Base Clock" data-d="საბაზისო სიხშირე, რომლის გარშემოც პროცესორი ჩვეულებრივ მუშაობს.">Base Clock</th><td>2.5 GHz</td><td>3.5 GHz</td></tr>
+     <tr><th class="hs" data-t="Boost Clock" data-d="მაქსიმალური სიხშირე, რომელსაც პროცესორი დატვირთვისას აღწევს, თუ ტემპერატურა და ენერგია იძლევა საშუალებას.">Boost Clock</th><td>4.4 GHz</td><td>4.4 GHz</td></tr>
+     <tr><th class="hs" data-t="L1 Cache" data-d="ყველაზე სწრაფი და მცირე Cache, თითოეულ ბირთვში. აქ ჯამური მოცულობაა მითითებული.">L1 Cache</th><td>480 KB</td><td>384 KB</td></tr>
+     <tr><th class="hs" data-t="L2 Cache" data-d="უფრო დიდი Cache, ჩვეულებრივ თითო ბირთვზე.">L2 Cache</th><td>7.5 MB</td><td>3 MB</td></tr>
+     <tr><th class="hs" data-t="L3 Cache" data-d="ყველა ბირთვისთვის საერთო დიდი Cache. თამაშებში მნიშვნელოვანი.">L3 Cache</th><td>18 MB</td><td>32 MB</td></tr>
+     <tr><th class="hs" data-t="არქიტექტურა" data-d="პროცესორის შიდა ორგანიზაცია. ერთნაირ სიხშირეზე სხვადასხვა არქიტექტურა სხვადასხვა წარმადობას იძლევა.">არქიტექტურა</th><td>Golden Cove</td><td>Zen 3</td></tr>
+     <tr><th class="hs" data-t="წარმოების ტექნოლოგია (nm)" data-d="ტექნოლოგიური პროცესი. დღეს ეს უფრო თაობის სახელია, ვიდრე ზუსტი ზომა.">ტექნოლოგია</th><td>Intel 7 (~10 nm)</td><td>7 nm</td></tr>
+     <tr><th class="hs" data-t="TDP" data-d="თერმული დიზაინის სიმძლავრე — მიუთითებს გაგრილების მოთხოვნაზე. რეალური მოხმარება დატვირთვის მიხედვით იცვლება.">TDP</th><td>65 W</td><td>65 W</td></tr>
+     <tr><th class="hs" data-t="Socket" data-d="დედაპლატის ბუდის ტიპი. CPU და დედაპლატა ერთნაირი Socket-ის უნდა იყოს.">Socket</th><td>LGA1700</td><td>AM4</td></tr>
+     <tr><th class="hs" data-t="ინტეგრირებული გრაფიკა" data-d="აქვს თუ არა ჩაშენებული GPU. თუ არ აქვს, ცალკე ვიდეო ბარათი აუცილებელია.">iGPU</th><td>UHD 730 ✓</td><td>არ აქვს ✗</td></tr>
+    </tbody>
+   </table>
+  </div>
+  <div>
+   <div class="cap" style="margin-top:0"><b>მიიტანეთ მაუსი ტერმინზე</b><span>განმარტება აქ გამოჩნდება.</span></div>
+   <div class="note">დააკვირდით: ბირთვები, ნაკადები, Boost და TDP ერთნაირია, მაგრამ განსხვავდება Cache, Base Clock, Socket და iGPU. ამიტომ <b>სწორი არჩევანი საჭიროებაზეა დამოკიდებული</b> — მაგალითად, Ryzen 5 5600-ს ცალკე ვიდეო ბარათი აუცილებლად სჭირდება.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 6 MANUFACTURERS -->
+<section class="slide" data-sec="cpu" data-title="CPU-ის მწარმოებლები">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>Intel და AMD</h2>
+ <p class="lead">ორი ყველაზე ცნობილი მწარმოებელი. სერიები დაახლოებით ერთ საფეხურებს შეესაბამება, მაგრამ <b>მნიშვნელოვანია კონკრეტული მოდელი და არა მხოლოდ ბრენდი</b>.</p>
+ <div class="grid even">
+  <div class="fig lad">
+   <h3 style="margin-top:0">Intel</h3>
+   <div class="row hs" data-t="Core i3" data-d="საწყისი დონე: ოფისი, სწავლა, ინტერნეტი, მსუბუქი სამუშაოები."><i style="width:22%;background:var(--cpu);opacity:.45"></i><b>Core i3</b></div>
+   <div class="row hs" data-t="Core i5" data-d="საშუალო დონე: ყველაზე პოპულარული არჩევანი თამაშებისა და ყოველდღიური სამუშაოსთვის."><i style="width:40%;background:var(--cpu);opacity:.6"></i><b>Core i5</b></div>
+   <div class="row hs" data-t="Core i7" data-d="მაღალი დონე: მეტი ბირთვი — ვიდეომონტაჟი, პროგრამირება, სტრიმინგი."><i style="width:58%;background:var(--cpu);opacity:.75"></i><b>Core i7</b></div>
+   <div class="row hs" data-t="Core i9" data-d="უმაღლესი სამომხმარებლო დონე: მძიმე პროფესიონალური და სათამაშო სამუშაოები."><i style="width:76%;background:var(--cpu);opacity:.9"></i><b>Core i9</b></div>
+   <div class="row hs" data-t="Core Ultra" data-d="Intel-ის ახალი სახელწოდების ხაზი (Core Ultra 5/7/9), ხშირად AI ბლოკით (NPU)."><i style="width:70%;background:var(--cpu)"></i><b>Core Ultra</b></div>
+  </div>
+  <div class="fig lad">
+   <h3 style="margin-top:0">AMD</h3>
+   <div class="row hs" data-t="Ryzen 3" data-d="საწყისი დონე: ოფისი, სწავლა, ინტერნეტი."><i style="width:22%;background:var(--hot);opacity:.45"></i><b>Ryzen 3</b></div>
+   <div class="row hs" data-t="Ryzen 5" data-d="საშუალო დონე: კარგი ბალანსი თამაშებისა და სამუშაოსთვის."><i style="width:40%;background:var(--hot);opacity:.6"></i><b>Ryzen 5</b></div>
+   <div class="row hs" data-t="Ryzen 7" data-d="მაღალი დონე: მეტი ბირთვი პროფესიონალური სამუშაოებისთვის."><i style="width:58%;background:var(--hot);opacity:.75"></i><b>Ryzen 7</b></div>
+   <div class="row hs" data-t="Ryzen 9" data-d="უმაღლესი სამომხმარებლო დონე: 12–16 ბირთვი."><i style="width:76%;background:var(--hot);opacity:.9"></i><b>Ryzen 9</b></div>
+   <div class="row hs" data-t="Threadripper" data-d="სამუშაო სადგურების პროცესორი: ათობით ბირთვი 3D რენდერისა და მეცნიერული გამოთვლებისთვის."><i style="width:96%;background:var(--hot)"></i><b>Threadripper</b></div>
+  </div>
+ </div>
+ <div class="cap"><b>მიიტანეთ მაუსი სერიაზე</b><span>ზოლის სიგრძე პირობითად აჩვენებს სერიის დონეს.</span></div>
+</section>
+
+<!-- 7 MODEL DECODER -->
+<section class="slide" data-sec="cpu" data-title="CPU-ის მოდელი">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>მოდელის სახელის გაშიფვრა</h2>
+ <p class="lead">მოდელი განსაზღვრავს კონკრეტულ პროცესორს. მიიტანეთ მაუსი სახელის თითოეულ ნაწილზე.</p>
+ <div class="fig">
+  <div class="dec">
+   <span class="hs" data-t="Intel — მწარმოებელი" data-d="კომპანია, რომელმაც პროცესორი შექმნა.">Intel</span>
+   <span class="hs" data-t="Core i5 — სერია" data-d="პროდუქტის სერია/დონე: i3, i5, i7, i9.">Core i5</span>
+   <span class="hs" data-t="12 — თაობა" data-d="პირველი ციფრები თაობას აჩვენებს: 12400 → მე-12 თაობა.">12</span>
+   <span class="hs" data-t="400 — მოდელის ნომერი" data-d="სერიის შიგნით პოზიცია: რაც მეტია, მით უფრო ძლიერია ჩვეულებრივ (12400 < 12600).">400</span>
+  </div>
+  <div class="dec">
+   <span class="hs" data-t="AMD — მწარმოებელი" data-d="კომპანია, რომელმაც პროცესორი შექმნა.">AMD</span>
+   <span class="hs" data-t="Ryzen 5 — სერია" data-d="პროდუქტის სერია/დონე: Ryzen 3, 5, 7, 9.">Ryzen 5</span>
+   <span class="hs" data-t="5 — თაობა" data-d="პირველი ციფრი სერიის თაობაა: 5600 → Ryzen 5000 სერია.">5</span>
+   <span class="hs" data-t="600 — მოდელის ნომერი" data-d="სერიის შიგნით პოზიცია: 5600 < 5800.">600</span>
+  </div>
+  <h3>სუფიქსები — ასოები ბოლოში</h3>
+  <div class="chips">
+   <span class="chip hs" data-t="K (Intel)" data-d="განბლოკილი მულტიპლიკატორი — შესაძლებელია ოვერკლოკი (სიხშირის ხელით აწევა). მაგ. i5-12600K.">K</span>
+   <span class="chip hs" data-t="F (Intel)" data-d="ჩაშენებული გრაფიკის გარეშე — აუცილებლად სჭირდება ვიდეო ბარათი. მაგ. i5-12400F.">F</span>
+   <span class="chip hs" data-t="X (AMD)" data-d="უფრო მაღალი სიხშირე ან წარმადობა. მაგ. Ryzen 5 5600X.">X</span>
+   <span class="chip hs" data-t="G (AMD)" data-d="აქვს ჩაშენებული გრაფიკა. მაგ. Ryzen 5 5600G.">G</span>
+   <span class="chip hs" data-t="U" data-d="ლეპტოპის დაბალი ენერგომოხმარების ვერსია — ბატარეის დაზოგვა.">U</span>
+   <span class="chip hs" data-t="H / HX" data-d="ლეპტოპის მაღალი წარმადობის ვერსია — სათამაშო და სამუშაო ლეპტოპები.">H / HX</span>
+  </div>
+  <div class="cap"><b>მიიტანეთ მაუსი სახელის ნაწილზე</b><span>მწარმოებელი → სერია → თაობა → მოდელი → სუფიქსი</span></div>
+ </div>
+</section>
+
+<!-- 8 GENERATIONS -->
+<section class="slide" data-sec="cpu" data-title="CPU-ის თაობა">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>თაობა: ახალი ყოველთვის უკეთესია?</h2>
+ <div class="grid">
+  <div class="txt">
+   <p>ახალ თაობაში მწარმოებელი ხშირად აუმჯობესებს:</p>
+   <ul><li>არქიტექტურას</li><li>წარმადობას</li><li>ენერგოეფექტურობას</li><li>ბირთვების რაოდენობას</li><li>ინსტრუქციების დამუშავებას და ტექნოლოგიებს</li></ul>
+   <div class="note"><b>მაგრამ:</b> ახალი თაობა ავტომატურად არ ნიშნავს, რომ ყველა ძველ პროცესორზე უკეთესია. საჭიროა კონკრეტული მოდელების შედარება.</div>
+  </div>
+  <div class="fig">
+   <p class="hint">მაგალითი: ახალი i3 vs ძველი i7</p>
+   <div class="cols2">
+    <div class="card cpuB hs" data-t="Core i3-12100 — ახალი თაობა" data-d="მე-12 თაობა, 4 ბირთვი / 8 ნაკადი. თითო ბირთვი ძალიან სწრაფია — კარგია ერთნაკადიან ამოცანებში.">
+     <h3>Core i3-12100</h3><b>მე-12 თაობა</b><br>4 ბირთვი / 8 ნაკადი
+     <div class="meter" style="margin-top:8px"><i style="width:88%;background:var(--cpu)"></i><span>ერთი ბირთვი</span></div>
+     <div class="meter" style="margin-top:6px"><i style="width:48%;background:var(--cpu)"></i><span>ყველა ბირთვი</span></div>
+    </div>
+    <div class="card cpuB hs" data-t="Core i7-10700 — ძველი თაობა" data-d="მე-10 თაობა, მაგრამ 8 ბირთვი / 16 ნაკადი. მრავალბირთვიან სამუშაოში (რენდერი, ვიდეომონტაჟი) ახალ i3-ზე ძლიერია.">
+     <h3>Core i7-10700</h3><b>მე-10 თაობა</b><br>8 ბირთვი / 16 ნაკადი
+     <div class="meter" style="margin-top:8px"><i style="width:74%;background:var(--cpu)"></i><span>ერთი ბირთვი</span></div>
+     <div class="meter" style="margin-top:6px"><i style="width:82%;background:var(--cpu)"></i><span>ყველა ბირთვი</span></div>
+    </div>
+   </div>
+   <div class="cap"><b>მიიტანეთ მაუსი ბარათზე</b><span>ზოლები პირობითი შედარებაა.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 9 CORES THREADS -->
+<section class="slide" data-sec="cpu" data-title="Core და Threads">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>ბირთვები (Core) და ნაკადები (Thread)</h2>
+ <div class="grid">
+  <div class="txt">
+   <p><b>Core — ბირთვი</b>: პროცესორის დამოუკიდებელი დამამუშავებელი ერთეული. რაც მეტი ბირთვია, მით მეტი ამოცანა მუშავდება პარალელურად.</p>
+   <p><b>Thread — ნაკადი</b>: სამუშაოს დამუშავების ლოგიკური ერთეული. ზოგ პროცესორს ერთ ბირთვზე ორი ნაკადის დამუშავება შეუძლია.</p>
+   <div class="chips"><span class="chip">2 Core — ორბირთვიანი</span><span class="chip">4 Core</span><span class="chip">6 Core</span><span class="chip">8 Core</span></div>
+   <div class="note">ანალოგია: <b>ბირთვი — მზარეული</b>, <b>ნაკადი — მისი ორი ხელი</b>. 6 მზარეული 12 ხელით ერთდროულად უფრო მეტ კერძს ამზადებს. მნიშვნელოვანია არა მხოლოდ რაოდენობა, არამედ არქიტექტურაც.</div>
+  </div>
+  <div class="fig">
+   <p class="hint">6 Core / 12 Thread პროცესორი</p>
+   <svg viewBox="0 0 600 360" id="ctSvg" role="img" aria-label="ბირთვები და ნაკადები">
+    <g class="hs" data-t="ამოცანების რიგი" data-d="ოპერაციული სისტემა პროგრამების სამუშაოს ნაკადებად ყოფს და ბირთვებს უნაწილებს.">
+     <rect class="o" x="8" y="20" width="138" height="320" rx="12" fill="var(--panel2)" stroke="var(--line)"/>
+     <text x="77" y="46" text-anchor="middle" class="lb">ამოცანები</text>
+     <g id="tasks"></g></g>
+    <g fill="none" stroke="var(--muted)" stroke-width="2" marker-end="url(#ar)"><path d="M150 180 L182 180"/></g>
+    <g class="hs" data-t="CPU — 6 ბირთვი" data-d="ექვსი ფიზიკური ბირთვი ერთ კრისტალზე. თითოეული დამოუკიდებლად ამუშავებს თავის სამუშაოს.">
+     <rect class="o" x="188" y="10" width="404" height="340" rx="14" fill="var(--die)"/></g>
+    <g id="ctCores"></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი ბირთვზე ან ნაკადზე</b><span>ფიზიკური ბირთვი შეიცავს ორ ლოგიკურ ნაკადს.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 CLOCK -->
+<section class="slide" data-sec="cpu" data-title="Clock Speed, Base და Boost">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>სიხშირე: Base Clock და Boost Clock</h2>
+ <div class="grid">
+  <div class="txt">
+   <p><b>Clock Speed</b> გამოხატავს, რა სიჩქარით მუშაობს პროცესორის საათის ციკლი. იზომება <b>MHz</b> და <b>GHz</b>-ში. 3.5 GHz = 3.5 მილიარდი ციკლი წამში.</p>
+   <p><b>Base Clock</b> — საბაზისო სიხშირე (მაგ. 3.2 GHz).<br><b>Boost Clock</b> — უფრო მაღალი სიხშირე (მაგ. 4.6 GHz), რომელზეც პროცესორი გადადის მაღალი დატვირთვისას, თუ ტემპერატურა და ენერგია იძლევა საშუალებას.</p>
+   <div class="note">CPU-ის წარმადობა <b>მხოლოდ GHz-ით არ განისაზღვრება</b> — მნიშვნელოვანია არქიტექტურა, ბირთვები და Cache.</div>
+   <p><b>შეცვალეთ დატვირთვა:</b></p>
+   <div class="seg" id="loadSeg">
+    <button data-v="0.8" aria-pressed="false">უმოქმედო</button>
+    <button data-v="3.2" aria-pressed="true">ჩვეულებრივი</button>
+    <button data-v="4.6" aria-pressed="false">მაღალი (თამაში)</button>
+   </div>
+  </div>
+  <div class="fig">
+   <svg viewBox="0 0 600 380" role="img" aria-label="სიხშირის მაჩვენებელი">
+    <g id="gauge"></g>
+    <line id="needle" x1="300" y1="250" x2="300" y2="100" stroke="var(--hot)" stroke-width="5" stroke-linecap="round" style="transform-origin:300px 250px;transition:transform .7s cubic-bezier(.3,1.4,.5,1)"/>
+    <circle cx="300" cy="250" r="12" fill="var(--ink)"/>
+    <text id="ghz" x="300" y="296" text-anchor="middle" style="font-size:34px;font-weight:900">3.2 GHz</text>
+    <g class="hs" data-t="საათის სიგნალი" data-d="თითო „ტალღა“ ერთი ციკლია. რაც მეტია სიხშირე, მით მეტი ციკლი ხდება ერთ წამში.">
+     <path class="o" id="wave" d="" fill="none" stroke="var(--cpu)" stroke-width="3"/>
+     <rect x="30" y="318" width="540" height="50" fill="transparent"/></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი ზონაზე</b><span>უმოქმედო, Base და Boost ზონები.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 11 CACHE -->
+<section class="slide" data-sec="cpu" data-title="CPU Cache: L1, L2, L3">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>Cache: L1, L2 და L3</h2>
+ <div class="grid">
+  <div class="txt">
+   <p><b>Cache</b> — ძალიან სწრაფი მეხსიერება პროცესორის შიგნით. მისი მიზანია ხშირად საჭირო მონაცემებისა და ინსტრუქციების სწრაფად მიწოდება.</p>
+   <ul>
+    <li><b>L1</b> — ყველაზე სწრაფი და მცირე, უშუალოდ ბირთვთან.</li>
+    <li><b>L2</b> — უფრო დიდი, ოდნავ ნელი.</li>
+    <li><b>L3</b> — კიდევ უფრო დიდი, საერთოა ყველა ბირთვისთვის, ამცირებს RAM-ზე მიმართვებს.</li>
+   </ul>
+   <div class="note">ანალოგია: <b>L1</b> — ხელში გიჭირავთ, <b>L2</b> — მაგიდაზე დევს, <b>L3</b> — ოთახის თაროზე, <b>RAM</b> — სხვა ოთახში, <b>SSD</b> — ბიბლიოთეკაში.</div>
+  </div>
+  <div class="fig">
+   <svg viewBox="0 0 640 360" role="img" aria-label="მეხსიერების იერარქია">
+    <g fill="none" stroke="var(--muted)" stroke-width="2"><path d="M560 30 L80 30" marker-end="url(#ar)"/><path d="M80 330 L560 330" marker-end="url(#ar)"/></g>
+    <text x="320" y="22" text-anchor="middle" class="sm mu">უფრო სწრაფი</text>
+    <text x="320" y="352" text-anchor="middle" class="sm mu">უფრო დიდი მოცულობა</text>
+    <g class="hs" data-t="ბირთვი (Core)" data-d="აქ სრულდება გამოთვლები. ბირთვს მონაცემები უწყვეტად სჭირდება — თუ ლოდინს მოუწევს, დრო იკარგება.">
+     <rect class="o" x="12" y="150" width="56" height="56" rx="8" fill="var(--cpu)"/><text x="40" y="184" text-anchor="middle" class="lw sm">Core</text></g>
+    <g class="hs" data-t="L1 Cache" data-d="მოცულობა: ~32–80 KB თითო ბირთვზე. დაყოვნება: ~1 ნანოწამი (4–5 ციკლი). ყველაზე სწრაფი.">
+     <rect class="o" x="82" y="148" width="60" height="60" rx="8" fill="var(--cache)" stroke="var(--cpu)" stroke-width="2"/><text x="112" y="183" text-anchor="middle" class="lb">L1</text><text x="112" y="232" text-anchor="middle" class="sm mu">~1 ns</text></g>
+    <g class="hs" data-t="L2 Cache" data-d="მოცულობა: ~0.5–2 MB თითო ბირთვზე. დაყოვნება: ~3–5 ნანოწამი.">
+     <rect class="o" x="156" y="133" width="80" height="90" rx="8" fill="var(--cache)" stroke="var(--cpu)" stroke-width="2" opacity=".85"/><text x="196" y="183" text-anchor="middle" class="lb">L2</text><text x="196" y="246" text-anchor="middle" class="sm mu">~4 ns</text></g>
+    <g class="hs" data-t="L3 Cache" data-d="მოცულობა: ~8–96 MB, საერთოა ყველა ბირთვისთვის. დაყოვნება: ~10–15 ნანოწამი.">
+     <rect class="o" x="250" y="113" width="104" height="130" rx="8" fill="var(--cache)" stroke="var(--cpu)" stroke-width="2" opacity=".7"/><text x="302" y="183" text-anchor="middle" class="lb">L3</text><text x="302" y="266" text-anchor="middle" class="sm mu">~12 ns</text></g>
+    <g class="hs" data-t="RAM — ოპერატიული მეხსიერება" data-d="CPU-ს გარეთაა. მოცულობა: 8–64 GB. დაყოვნება: ~70–100 ნანოწამი — L1-ზე დაახლოებით 80-ჯერ ნელი.">
+     <rect class="o" x="368" y="88" width="120" height="180" rx="8" fill="var(--panel2)" stroke="var(--muted)" stroke-width="2"/><text x="428" y="183" text-anchor="middle" class="lb">RAM</text><text x="428" y="291" text-anchor="middle" class="sm mu">~80 ns</text></g>
+    <g class="hs" data-t="SSD — მუდმივი მეხსიერება" data-d="პროგრამები და ფაილები აქ ინახება. ასობით GB–TB, მაგრამ დაყოვნება ~50–100 მიკროწამი — ათასობითჯერ ნელი ვიდრე Cache.">
+     <rect class="o" x="502" y="60" width="128" height="236" rx="8" fill="var(--panel2)" stroke="var(--line)" stroke-width="2" stroke-dasharray="6 5"/><text x="566" y="183" text-anchor="middle" class="lb">SSD</text><text x="566" y="318" text-anchor="middle" class="sm mu">~80 000 ns</text></g>
+    <line x1="246" y1="60" x2="246" y2="300" stroke="var(--cpu)" stroke-dasharray="4 4" opacity=".0"/>
+    <text x="180" y="86" text-anchor="middle" class="sm" style="fill:var(--cpu-ink);font-weight:700">პროცესორის შიგნით</text>
+    <path d="M78 96 L354 96" stroke="var(--cpu)" stroke-width="2"/>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი დონეზე</b><span>მოცულობა და დაყოვნება (სავარაუდო მნიშვნელობები).</span></div>
+  </div>
+ </div>
+</section>
+<!-- 12 ARCH + NM -->
+<section class="slide" data-sec="cpu" data-title="არქიტექტურა და nm">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>არქიტექტურა და წარმოების ტექნოლოგია (nm)</h2>
+ <div class="grid even">
+  <div class="txt">
+   <p><b>CPU Architecture</b> აღწერს, როგორ არის პროცესორი ორგანიზებული და როგორ ასრულებს ინსტრუქციებს. ის მოქმედებს წარმადობაზე, ენერგოეფექტურობაზე, ბირთვების მუშაობაზე და ტექნოლოგიების მხარდაჭერაზე.</p>
+   <div class="note">ორი პროცესორი შეიძლება <b>ერთნაირი სიხშირით</b> მუშაობდეს, მაგრამ განსხვავებული არქიტექტურის გამო <b>განსხვავებული წარმადობა</b> ჰქონდეს.</div>
+   <h3>არქიტექტურების მაგალითები</h3>
+   <div class="fig" style="padding:12px">
+    <div class="chips" style="margin:0">
+     <span class="chip hs" data-t="Zen 3 (AMD)" data-d="Ryzen 5000 სერია, 2020 წ. 7 nm. დიდი წინსვლა თამაშებში საერთო L3 Cache-ის გამო.">Zen 3</span>
+     <span class="chip hs" data-t="Zen 4 (AMD)" data-d="Ryzen 7000 სერია, 5 nm, Socket AM5, DDR5 მეხსიერება.">Zen 4</span>
+     <span class="chip hs" data-t="Zen 5 (AMD)" data-d="Ryzen 9000 სერია — უფრო მაღალი წარმადობა ერთ ციკლზე.">Zen 5</span>
+     <span class="chip hs" data-t="Alder Lake (Intel)" data-d="მე-12 თაობა. ჰიბრიდული არქიტექტურა: ძლიერი P-ბირთვები + ეკონომიური E-ბირთვები.">Alder Lake</span>
+     <span class="chip hs" data-t="Raptor Lake (Intel)" data-d="მე-13/14 თაობა — მეტი E-ბირთვი და მეტი Cache.">Raptor Lake</span>
+     <span class="chip hs" data-t="Arrow Lake (Intel)" data-d="Core Ultra 200 სერია, ახალი სახელწოდებით და ჩაშენებული NPU-თი.">Arrow Lake</span>
+    </div>
+    <div class="cap"><b>მიიტანეთ მაუსი არქიტექტურაზე</b><span>მოკლე აღწერა.</span></div>
+   </div>
+  </div>
+  <div class="fig">
+   <h3 style="margin-top:0">რამდენად პატარაა ნანომეტრი?</h3>
+   <p class="hint">1 nm = მილიმეტრის მემილიონედი. ზოლები ლოგარითმულ მასშტაბშია.</p>
+   <div class="sbar hs" data-t="ადამიანის თმა" data-d="სისქე დაახლოებით 80 000 nm (0.08 მმ)."><b>თმის ღერი</b><i style="width:100%;background:var(--muted)"></i></div>
+   <div class="sbar hs" data-t="სისხლის წითელი უჯრედი" data-d="დიამეტრი დაახლოებით 7 000 nm."><b>სისხლის უჯრედი</b><i style="width:79%;background:var(--muted)"></i></div>
+   <div class="sbar hs" data-t="ბაქტერია" data-d="დაახლოებით 1 000 nm."><b>ბაქტერია</b><i style="width:62%;background:var(--muted)"></i></div>
+   <div class="sbar hs" data-t="ვირუსი" data-d="დაახლოებით 100 nm."><b>ვირუსი</b><i style="width:41%;background:var(--muted)"></i></div>
+   <div class="sbar hs" data-t="14 nm ტექნოლოგია" data-d="2014–2020 წლების პროცესორები (მაგ. Intel-ის 6–10 თაობა)."><b>14 nm</b><i style="width:23%"></i></div>
+   <div class="sbar hs" data-t="10 nm / 7 nm" data-d="Intel 7, TSMC 7 nm — მაგ. Ryzen 5000, Intel 12–14 თაობა."><b>10 / 7 nm</b><i style="width:17%"></i></div>
+   <div class="sbar hs" data-t="5 nm და ნაკლები" data-d="Ryzen 7000/9000, Apple M სერია. ახალი ტექნოლოგია = მეტი ტრანზისტორი ერთ ფართზე და უკეთესი ენერგოეფექტურობა.">
+    <b>5 nm</b><i style="width:12%"></i></div>
+   <div class="note" style="margin-bottom:0">დღეს „nm“ უფრო <b>ტექნოლოგიური თაობის სახელია</b>, ვიდრე ტრანზისტორის ზუსტი ზომა. ამიტომ მხოლოდ nm-ით CPU-ის შეფასება არ შეიძლება.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 13 TDP COOLING -->
+<section class="slide" data-sec="cpu" data-title="TDP და CPU-ის გაგრილება">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span></div>
+ <h2>TDP და პროცესორის გაგრილება</h2>
+ <div class="grid">
+  <div class="txt">
+   <p><b>TDP — Thermal Design Power</b> დაკავშირებულია პროცესორის თერმულ/ენერგეტიკულ დიზაინთან და გაგრილების მოთხოვნებთან. იზომება <b>ვატებში (W)</b>, მაგ. <b>TDP: 65W</b>.</p>
+   <div class="note">TDP <b>არ არის</b> ზუსტი მუდმივი ენერგომოხმარება. რეალური მოხმარება დატვირთვის, მოდელისა და რეჟიმის მიხედვით იცვლება.</div>
+   <p>CPU მუშაობისას სითბოს გამოყოფს, ამიტომ საჭიროა გაგრილება. მთავარი მიზანი — <b>ტემპერატურის კონტროლი</b>.</p>
+   <ul><li><b>Air Cooling</b> — heatsink, fan, thermal paste</li><li><b>Liquid Cooling</b> — სითხე, ტუმბო, რადიატორი, ვენტილატორები</li></ul>
+  </div>
+  <div class="fig">
+   <svg viewBox="0 0 640 400" role="img" aria-label="ჰაერის და სითხის გაგრილება">
+    <text x="150" y="20" text-anchor="middle" class="lb">Air Cooling</text>
+    <text x="480" y="20" text-anchor="middle" class="lb">Liquid Cooling</text>
+    <rect x="10" y="356" width="620" height="16" rx="3" fill="var(--pcb)"/>
+    <text x="320" y="392" text-anchor="middle" class="sm mu">დედაპლატა</text>
+    <!-- AIR -->
+    <g class="hs" data-t="რადიატორი (Heatsink)" data-d="ალუმინის თხელი ფირფიტების წყობა. დიდი ზედაპირი სითბოს ჰაერს სწრაფად გადასცემს.">
+     <rect class="o" x="60" y="40" width="150" height="210" rx="4" fill="url(#hfins)" stroke="var(--fin)"/></g>
+    <g class="hs" data-t="სითბური მილები (Heat pipes)" data-d="სპილენძის მილები სითხით შიგნით. სითხე ორთქლდება ცხელ ნაწილთან და სითბოს სწრაფად აწვდის რადიატორს.">
+     <g fill="none" stroke="var(--copper)" stroke-width="7" stroke-linecap="round"><path class="o" d="M90 50 V300"/><path d="M118 50 V300"/><path d="M152 50 V300"/><path d="M180 50 V300"/></g></g>
+    <g class="hs" data-t="ვენტილატორი (Fan)" data-d="ჰაერს რადიატორში ატარებს და ცხელ ჰაერს გარეთ ყრის.">
+     <rect class="o" x="214" y="60" width="34" height="170" rx="6" fill="var(--fanbg)" stroke="var(--fan)"/>
+     <path d="M231 75 V215" stroke="var(--fan)" stroke-width="3"/></g>
+    <g class="hs" data-t="ჰაერის ნაკადი" data-d="ცივი ჰაერი შედის ვენტილატორიდან, გადის რადიატორში და ცხელი გამოდის მეორე მხრიდან.">
+     <g fill="none" stroke="var(--hot)" stroke-width="2.5" marker-end="url(#arh)"><path class="o" d="M290 110 H256"/><path d="M290 170 H256"/><path d="M56 110 H22"/><path d="M56 170 H22"/></g></g>
+    <g class="hs" data-t="სპილენძის ძირი" data-d="ეხება პროცესორს და მისგან სითბოს იღებს.">
+     <rect class="o" x="78" y="300" width="114" height="22" rx="3" fill="var(--copper)"/></g>
+    <g class="hs" data-t="თერმოპასტა (Thermal paste)" data-d="თხელი ფენა პროცესორსა და გამაგრილებელს შორის. ავსებს მიკრო ხარვეზებს, რომ სითბო კარგად გადავიდეს.">
+     <rect class="o" x="92" y="322" width="86" height="8" fill="var(--metal)"/></g>
+    <g class="hs" data-t="CPU" data-d="სითბოს წყარო. TDP გვიჩვენებს, რამდენად ძლიერი გაგრილება სჭირდება.">
+     <rect class="o" x="92" y="330" width="86" height="26" rx="2" fill="var(--sub)"/><text x="135" y="348" text-anchor="middle" class="lw sm">CPU</text></g>
+    <!-- LIQUID -->
+    <g class="hs" data-t="რადიატორი (წყლის)" data-d="სითხე აქ გაცივდება: ცხელი სითხე გადის თხელ არხებში, ვენტილატორები კი ჰაერს ატარებენ.">
+     <rect class="o" x="350" y="40" width="260" height="62" rx="6" fill="url(#fins)" stroke="var(--fin)"/></g>
+    <g class="hs" data-t="ვენტილატორები" data-d="რადიატორზე დამაგრებული ვენტილატორები სითხეს აგრილებენ.">
+     <use class="o" href="#fan" x="380" y="104" width="60" height="60"/><use href="#fan" x="520" y="104" width="60" height="60"/></g>
+    <g class="hs" data-t="მილები (Tubes)" data-d="სითხე მოძრაობს წრეზე: ცხელი — რადიატორისკენ, ცივი — ტუმბოსკენ.">
+     <g fill="none" stroke-width="10" stroke-linecap="round"><path class="o" d="M440 288 C440 220 380 200 380 102" stroke="var(--hot)" opacity=".75"/><path d="M500 288 C500 220 580 200 580 102" stroke="var(--cpu)" opacity=".75"/></g></g>
+    <g class="hs" data-t="ტუმბო და წყლის ბლოკი" data-d="ეხება პროცესორს, იღებს სითბოს და ტუმბავს სითხეს წრეზე.">
+     <rect class="o" x="420" y="282" width="100" height="46" rx="10" fill="var(--shroud)"/><text x="470" y="310" text-anchor="middle" class="lw sm">ტუმბო</text></g>
+    <g class="hs" data-t="CPU" data-d="სითხის გაგრილება კარგია ძლიერი პროცესორებისთვის და ჩუმი მუშაობისთვის.">
+     <rect class="o" x="428" y="330" width="84" height="26" rx="2" fill="var(--sub)"/><text x="470" y="348" text-anchor="middle" class="lw sm">CPU</text></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი გამაგრილებლის ნაწილზე</b><span>ჰაერის და სითხის სისტემები.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 14 iGPU -->
+<section class="slide" data-sec="cpu" data-title="Integrated Graphics / iGPU">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span><span class="tag gpu">GPU</span></div>
+ <h2>ჩაშენებული გრაფიკა — iGPU</h2>
+ <div class="grid">
+  <div class="txt">
+   <p>ზოგ CPU-ს აქვს ჩაშენებული გრაფიკული პროცესორი — <b>Integrated GPU (iGPU)</b>. ამ შემთხვევაში ცალკე ვიდეო ბარათი ყოველთვის აუცილებელი არ არის.</p>
+   <p>iGPU საკმარისია:</p>
+   <ul><li>ოფისისთვის და ინტერნეტისთვის</li><li>ვიდეოების საყურებლად</li><li>მსუბუქი გრაფიკული სამუშაოებისთვის</li><li>მარტივი თამაშებისთვის</li></ul>
+   <div class="note">მოთხოვნად 3D თამაშებსა და პროფესიონალურ გრაფიკაში ხშირად საჭიროა <b>ცალკე, ძლიერი GPU</b>.</div>
+  </div>
+  <div class="fig">
+   <svg viewBox="0 0 600 330" role="img" aria-label="iGPU-ის მუშაობის სქემა">
+    <g class="hs" data-t="CPU ბირთვები" data-d="იმავე კრისტალზე არიან, სადაც iGPU.">
+     <rect class="o" x="20" y="40" width="220" height="200" rx="10" fill="var(--die)"/>
+     <g fill="var(--cpu-soft)"><rect x="35" y="55" width="55" height="55" rx="4"/><rect x="100" y="55" width="55" height="55" rx="4"/><rect x="35" y="120" width="55" height="55" rx="4"/><rect x="100" y="120" width="55" height="55" rx="4"/></g></g>
+    <g class="hs" data-t="iGPU" data-d="ჩაშენებული გრაფიკა იყენებს საერთო RAM-ს (ცალკე ვიდეომეხსიერება არ აქვს) და იმავე გაგრილებას, რასაც CPU.">
+     <rect class="o" x="165" y="55" width="62" height="170" rx="4" fill="var(--gpu-soft)" stroke="var(--gpu)" stroke-width="2"/><text x="196" y="145" text-anchor="middle" class="lb sm">iGPU</text></g>
+    <g class="hs" data-t="საერთო RAM" data-d="iGPU ვიდეომეხსიერებად ოპერატიული მეხსიერების ნაწილს იყენებს — ამიტომ RAM-ის სიჩქარე მის წარმადობაზე მოქმედებს.">
+     <rect class="o" x="40" y="262" width="180" height="40" rx="6" fill="var(--panel2)" stroke="var(--line)"/><text x="130" y="288" text-anchor="middle" class="lb">RAM (საერთო)</text></g>
+    <path d="M130 240 V262" stroke="var(--muted)" stroke-width="2" marker-end="url(#ar)" marker-start="url(#ar)"/>
+    <g class="hs" data-t="დედაპლატის ვიდეო გამოსასვლელი" data-d="iGPU-ს გამოსახულება გამოდის დედაპლატის HDMI ან DisplayPort პორტიდან — არა ვიდეო ბარათიდან.">
+     <rect class="o" x="300" y="120" width="120" height="50" rx="8" fill="var(--panel2)" stroke="var(--line)"/><text x="360" y="150" text-anchor="middle" class="lb sm">დედაპლატის HDMI</text></g>
+    <path d="M240 145 H296" stroke="var(--muted)" stroke-width="2.5" marker-end="url(#ar)"/>
+    <path d="M420 145 H456" stroke="var(--muted)" stroke-width="2.5" marker-end="url(#ar)"/>
+    <g class="hs" data-t="მონიტორი" data-d="მონიტორი უნდა ჩაერთოს დედაპლატის პორტში, თუ ცალკე ვიდეო ბარათი არ გაქვთ.">
+     <rect class="o" x="460" y="80" width="130" height="90" rx="8" fill="var(--shroud)"/><rect x="470" y="90" width="110" height="70" fill="var(--cpu)" opacity=".5"/><rect x="510" y="170" width="30" height="20" fill="var(--metal)"/><rect x="495" y="190" width="60" height="6" rx="3" fill="var(--metal)"/></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი სქემის ნაწილზე</b><span>როგორ მუშაობს ჩაშენებული გრაფიკა.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 15 WHAT IS GPU -->
+<section class="slide gpuS" data-sec="gpu" data-title="რა არის GPU?">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>რა არის GPU?</h2>
+ <div class="grid">
+  <div class="txt">
+   <p><b>GPU — Graphics Processing Unit</b>, ქართულად — გრაფიკული დამუშავების პროცესორი. სპეციალიზებულია <b>დიდი რაოდენობის გრაფიკული და პარალელური ოპერაციების</b> დამუშავებაში.</p>
+   <ul><li>თამაშები და 3D გრაფიკა</li><li>ვიდეომონტაჟი</li><li>ვიზუალიზაცია და 3D მოდელირება</li><li>AI გამოთვლები</li><li>გრაფიკული პროგრამები</li></ul>
+   <div class="note">ანალოგია: CPU — <b>რამდენიმე პროფესორი</b>, რომლებიც რთულ ამოცანებს სწრაფად ხსნიან. GPU — <b>ათასობით მოსწავლე</b>, თითოეული მარტივ მაგალითს ხსნის, მაგრამ ყველა ერთდროულად.</div>
+  </div>
+  <div class="fig">
+   <svg viewBox="0 0 600 330" role="img" aria-label="CPU და GPU ბირთვების შედარება">
+    <text x="130" y="22" text-anchor="middle" class="lb">CPU</text><text x="430" y="22" text-anchor="middle" class="lb">GPU</text>
+    <g class="hs" data-t="CPU: რამდენიმე ძლიერი ბირთვი" data-d="ჩვეულებრივ 4–16 ბირთვი. თითოეული რთულ, თანმიმდევრულ და ლოგიკურ ამოცანებს სწრაფად ასრულებს.">
+     <rect class="o" x="20" y="36" width="220" height="270" rx="12" fill="var(--die)"/>
+     <g fill="var(--cpu-soft)" stroke="var(--cpu)" stroke-width="2"><rect x="36" y="52" width="88" height="56" rx="6"/><rect x="136" y="52" width="88" height="56" rx="6"/><rect x="36" y="118" width="88" height="56" rx="6"/><rect x="136" y="118" width="88" height="56" rx="6"/><rect x="36" y="184" width="88" height="56" rx="6"/><rect x="136" y="184" width="88" height="56" rx="6"/></g>
+     <rect x="36" y="250" width="188" height="42" rx="6" fill="var(--cache)"/><text x="130" y="276" text-anchor="middle" class="sm lb">დიდი Cache</text></g>
+    <g class="hs" data-t="GPU: ათასობით პატარა ბირთვი" data-d="ათასობით მარტივი დამამუშავებელი ერთეული ერთდროულად ითვლის — მაგ. მილიონობით პიქსელის ფერს.">
+     <rect class="o" x="300" y="36" width="270" height="270" rx="12" fill="var(--die)"/>
+     <g id="gpuGrid"></g></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი CPU-ზე ან GPU-ზე</b><span>ბირთვების რაოდენობა და ტიპი.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 16 VIDEO CARD ANATOMY -->
+<section class="slide gpuS" data-sec="gpu" data-title="GPU და ვიდეო ბარათი — ნაწილები">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>ვიდეო ბარათის ნაწილები</h2>
+ <div class="grid">
+  <div class="txt">
+   <p><b>GPU და ვიდეო ბარათი ერთი და იგივე არ არის.</b> GPU — გრაფიკული პროცესორია (ჩიპი). ვიდეო ბარათი — უფრო დიდი მოწყობილობა, რომელიც მოიცავს GPU-ს და სხვა კომპონენტებს.</p>
+   <ul><li>GPU — მთავარი გრაფიკული პროცესორი</li><li>VRAM — ვიდეომეხსიერება</li><li>გაგრილება: ვენტილატორები, რადიატორი, სითბური მილები</li><li>კვების ელექტრონული ნაწილი (VRM)</li><li>ვიდეო გამოსასვლელები</li><li>PCB — ბეჭდური დაფა</li></ul>
+   <p class="hint">სურათზე ბარათი „დაშლილია“ ფენებად.</p>
+  </div>
+  <div class="fig">
+   <svg viewBox="0 0 640 470" role="img" aria-label="ვიდეო ბარათის დაშლილი ხედი">
+    <g stroke="var(--muted)" stroke-dasharray="4 5" stroke-width="1.5"><path d="M40 140 L70 160"/><path d="M500 140 L530 160"/><path d="M70 250 L100 270"/><path d="M530 250 L560 270"/><path d="M130 390 L150 418"/><path d="M560 390 L590 418"/></g>
+    <g class="hs" data-t="გარსაცმი (Shroud)" data-d="პლასტმასის ან მეტალის გარე საფარი. იცავს შიდა ნაწილებს და ჰაერის ნაკადს მიმართავს.">
+     <rect class="o" x="40" y="20" width="460" height="120" rx="16" fill="var(--shroud)"/></g>
+    <g class="hs" data-t="ვენტილატორები (Fans)" data-d="ატარებენ ჰაერს რადიატორში. დაბალი დატვირთვისას ზოგ ბარათზე საერთოდ ჩერდებიან (0 dB რეჟიმი).">
+     <use class="o" href="#fan" x="70" y="30" width="100" height="100"/><use href="#fan" x="220" y="30" width="100" height="100"/><use href="#fan" x="370" y="30" width="100" height="100"/></g>
+    <g class="hs" data-t="რადიატორი (Heatsink)" data-d="ალუმინის ფირფიტების დიდი წყობა, რომელიც GPU-ს სითბოს ჰაერს გადასცემს.">
+     <rect class="o" x="70" y="160" width="460" height="90" rx="6" fill="url(#fins)" stroke="var(--fin)"/></g>
+    <g class="hs" data-t="სითბური მილები (Heat pipes)" data-d="სპილენძის მილები სითბოს GPU-დან რადიატორის მთელ სიგრძეზე ანაწილებენ.">
+     <g fill="none" stroke="var(--copper)" stroke-width="6" stroke-linecap="round"><path class="o" d="M90 190 H510"/><path d="M90 205 H510"/><path d="M90 220 H510"/></g></g>
+    <g class="hs" data-t="PCB — ბეჭდური დაფა" data-d="მრავალშრიანი დაფა, რომელზეც ყველა ელექტრონული კომპონენტია დამაგრებული და ერთმანეთთან დაკავშირებული.">
+     <rect class="o" x="100" y="270" width="460" height="120" rx="6" fill="var(--pcb)"/></g>
+    <g class="hs" data-t="GPU ჩიპი" data-d="ვიდეო ბარათის „გული“ — გრაფიკული პროცესორი. ათასობით ბირთვი, Ray Tracing და AI ბლოკები.">
+     <rect class="o" x="285" y="292" width="76" height="76" rx="4" fill="var(--metal)"/><rect x="298" y="305" width="50" height="50" fill="var(--die)"/><text x="323" y="335" text-anchor="middle" class="lw sm">GPU</text></g>
+    <g class="hs" data-t="VRAM — ვიდეომეხსიერება" data-d="სწრაფი მეხსიერება (GDDR6/GDDR7) GPU-ს გარშემო. ინახავს ტექსტურებს და გამოსახულებას. მოცულობა: 8–24 GB.">
+     <g fill="var(--shroud)"><rect class="o" x="240" y="292" width="34" height="22"/><rect x="240" y="346" width="34" height="22"/><rect x="372" y="292" width="34" height="22"/><rect x="372" y="346" width="34" height="22"/><rect x="306" y="374" width="34" height="12"/><rect x="306" y="276" width="34" height="12"/></g></g>
+    <g class="hs" data-t="VRM — კვების ფაზები" data-d="ძაბვის რეგულატორი: ბლოკიდან მიღებულ 12V-ს GPU-სთვის საჭირო დაბალ, სტაბილურ ძაბვად გარდაქმნის.">
+     <g fill="var(--metal)"><rect class="o" x="440" y="300" width="22" height="22" rx="3"/><rect x="468" y="300" width="22" height="22" rx="3"/><rect x="496" y="300" width="22" height="22" rx="3"/><rect x="440" y="330" width="22" height="22" rx="3"/><rect x="468" y="330" width="22" height="22" rx="3"/><rect x="496" y="330" width="22" height="22" rx="3"/></g></g>
+    <g class="hs" data-t="დამატებითი კვების კონექტორი" data-d="8-pin PCIe ან 12V-2x6 (16-pin) კონექტორი — ძლიერი ბარათები კვებას პირდაპირ კვების ბლოკიდან იღებენ.">
+     <rect class="o" x="482" y="258" width="60" height="14" rx="2" fill="var(--shroud)" stroke="var(--gold)"/></g>
+    <g class="hs" data-t="PCIe x16 კონტაქტი" data-d="ოქროსფერი კონტაქტები დედაპლატის სლოტში ჩასადგმელად. მონაცემთა გაცვლა + 75W-მდე კვება.">
+     <rect class="o" x="160" y="390" width="230" height="16" fill="var(--gold)"/></g>
+    <g class="hs" data-t="ვიდეო გამოსასვლელები" data-d="მეტალის სამაგრზე: HDMI და DisplayPort. აქ ერთდება მონიტორი.">
+     <rect class="o" x="86" y="262" width="12" height="150" rx="2" fill="var(--metal)"/>
+     <g fill="var(--shroud)"><rect x="88" y="285" width="8" height="18"/><rect x="88" y="315" width="8" height="18"/><rect x="88" y="345" width="8" height="18"/></g></g>
+    <g class="hs" data-t="Backplate — უკანა ფირფიტა" data-d="მეტალის ფირფიტა ბარათის უკანა მხარეს. აძლიერებს ბარათს, რომ არ მოიღუნოს, და ნაწილობრივ სითბოსაც ფანტავს.">
+     <rect class="o" x="150" y="418" width="440" height="30" rx="6" fill="var(--metal)" opacity=".8"/></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი ბარათის ნაწილზე</b><span>11 ნაწილი: ვენტილატორები, GPU, VRAM, VRM…</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 17 GPU ARCH -->
+<section class="slide gpuS" data-sec="gpu" data-title="GPU Architecture და ბირთვები">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>GPU-ის არქიტექტურა და დამუშავების ბირთვები</h2>
+ <div class="grid">
+  <div class="txt">
+   <p>GPU-ის არქიტექტურა განსაზღვრავს, როგორ არის ორგანიზებული გრაფიკული პროცესორი. თანამედროვე GPU-ში არის სპეციალიზებული ბლოკები: <b>გრაფიკისთვის, Ray Tracing-ისთვის და AI-სთვის</b>.</p>
+   <p>მწარმოებლები ბირთვებს სხვადასხვა სახელს არქმევენ:</p>
+   <div class="chips"><span class="chip">NVIDIA — CUDA Cores</span><span class="chip">AMD — Stream Processors</span><span class="chip">Intel — Xe Cores</span></div>
+   <div class="note">მთავარი იდეა: <b>GPU ბევრ ოპერაციას პარალელურად ამუშავებს</b>. სხვადასხვა მწარმოებლის ბირთვების რაოდენობის პირდაპირ შედარება არ შეიძლება.</div>
+  </div>
+  <div class="fig">
+   <svg viewBox="0 0 640 400" role="img" aria-label="GPU არქიტექტურის ბლოკსქემა">
+    <g class="hs" data-t="GPU კრისტალი" data-d="მთელი გრაფიკული პროცესორი: რამდენიმე დიდი ბლოკი, L2 Cache და მეხსიერების კონტროლერები.">
+     <rect class="o" x="10" y="10" width="350" height="380" rx="12" fill="var(--die)"/></g>
+    <g class="hs" data-t="მეხსიერების კონტროლერები" data-d="აკავშირებენ GPU-ს VRAM-თან. მეხსიერების „სალტის სიგანე“ (მაგ. 128-bit, 256-bit) გავლენას ახდენს სიჩქარეზე.">
+     <g fill="var(--gpu)"><rect class="o" x="24" y="18" width="322" height="10" rx="3"/><rect x="24" y="372" width="322" height="10" rx="3"/></g></g>
+    <g id="gpcs"></g>
+    <g class="hs" data-t="L2 Cache" data-d="ყველა ბლოკისთვის საერთო სწრაფი მეხსიერება.">
+     <rect class="o" x="24" y="190" width="322" height="20" rx="3" fill="var(--cache)"/><text x="185" y="205" text-anchor="middle" class="sm lb">L2 Cache</text></g>
+    <path d="M123 46 L400 40 M123 106 L400 380" stroke="var(--hot)" stroke-dasharray="5 5" stroke-width="1.5" fill="none"/>
+    <g class="hs" data-t="SM / Compute Unit" data-d="Streaming Multiprocessor (NVIDIA) ან Compute Unit (AMD) — GPU-ის ძირითადი სამშენებლო ბლოკი. ერთ GPU-ში ათობით ასეთი ბლოკია.">
+     <rect class="o" x="400" y="40" width="230" height="340" rx="10" fill="var(--panel2)" stroke="var(--hot)" stroke-width="2"/>
+     <text x="515" y="64" text-anchor="middle" class="lb">SM — ერთი ბლოკი</text></g>
+    <g class="hs" data-t="CUDA ბირთვები / Stream Processors" data-d="მარტივი დამამუშავებელი ერთეულები. ერთ SM-ში 64–128 ცალია, მთელ GPU-ში — ათასობით.">
+     <g id="cudaGrid"></g></g>
+    <g class="hs" data-t="Tensor / AI ბირთვები" data-d="სპეციალური ბლოკები მატრიცული გამოთვლებისთვის — ხელოვნური ინტელექტი, DLSS/FSR გამოსახულების გაუმჯობესება.">
+     <rect class="o" x="415" y="226" width="200" height="40" rx="6" fill="var(--hot)" opacity=".85"/><text x="515" y="251" text-anchor="middle" class="lw sm">Tensor / AI ბირთვები</text></g>
+    <g class="hs" data-t="RT ბირთვი" data-d="Ray Tracing-ის აჩქარება: ითვლის, სად ეჯახება სინათლის სხივი ობიექტს.">
+     <rect class="o" x="415" y="274" width="200" height="40" rx="6" fill="var(--gpu)"/><text x="515" y="299" text-anchor="middle" class="lb sm" style="fill:#1b1b1b">RT ბირთვი (Ray Tracing)</text></g>
+    <g class="hs" data-t="L1 / Shared Memory" data-d="ბლოკის შიდა სწრაფი მეხსიერება, რომელსაც ამ SM-ის ბირთვები ერთად იყენებენ.">
+     <rect class="o" x="415" y="322" width="200" height="40" rx="6" fill="var(--cache)"/><text x="515" y="347" text-anchor="middle" class="lb sm">L1 / Shared Memory</text></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი ბლოკზე</b><span>მარცხნივ — მთელი GPU, მარჯვნივ — ერთი SM გადიდებით.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 18 RAY TRACING -->
+<section class="slide gpuS" data-sec="gpu" data-title="Ray Tracing">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>Ray Tracing — სინათლის სხივების სიმულაცია</h2>
+ <div class="grid">
+  <div class="txt">
+   <p><b>Ray Tracing</b> — ტექნოლოგია, რომელიც რეალისტურ განათებასა და ჩრდილებს ქმნის სინათლის სხივების მოძრაობის სიმულაციით.</p>
+   <ul><li>რეალისტური განათება</li><li>ანარეკლები (სარკე, წყალი, მინა)</li><li>ჩრდილები</li><li>ვიზუალური ეფექტები</li></ul>
+   <div class="note">Ray Tracing <b>მნიშვნელოვნად ზრდის GPU-ზე დატვირთვას</b> — ამიტომ თანამედროვე GPU-ებს მისთვის სპეციალური RT ბირთვები აქვთ.</div>
+  </div>
+  <div class="fig">
+   <svg viewBox="0 0 600 360" role="img" aria-label="Ray Tracing სქემა">
+    <g class="hs" data-t="იატაკი (არეკლილი ზედაპირი)" data-d="პრიალა ზედაპირზე სხივი აირეკლება და ობიექტის ანარეკლი ჩანს.">
+     <rect class="o" x="20" y="300" width="570" height="40" fill="var(--panel2)" stroke="var(--line)"/></g>
+    <g class="hs" data-t="სინათლის წყარო" data-d="მზე ან ნათურა. სცენაში ყველა განათება მისგან მოდის.">
+     <circle class="o" cx="530" cy="58" r="26" fill="var(--gpu)"/><g stroke="var(--gpu)" stroke-width="3"><path d="M530 18v-10M530 108v-10M490 58h-10M580 58h-10M502 30l-7-7M565 93l-7-7M558 30l7-7M495 93l7-7"/></g></g>
+    <g class="hs" data-t="კამერა / თვალი" data-d="მაყურებლის პოზიცია. სხივები „კამერიდან“ იგზავნება თითოეული პიქსელისთვის.">
+     <path class="o" d="M30 150 h40 l20 -14 v52 l-20 -14 h-40z" fill="var(--ink)"/></g>
+    <g class="hs" data-t="ეკრანი — პიქსელები" data-d="თითო პიქსელისთვის ერთი ან მეტი სხივი იგზავნება. 4K ეკრანზე 8 მილიონზე მეტი პიქსელია!">
+     <rect class="o" x="130" y="80" width="40" height="160" fill="none" stroke="var(--muted)" stroke-width="2"/>
+     <g stroke="var(--muted)" stroke-width="1"><path d="M130 112h40M130 144h40M130 176h40M130 208h40M150 80v160"/></g></g>
+    <g class="hs" data-t="პირველადი სხივი" data-d="კამერიდან პიქსელის გავლით სცენაში გაგზავნილი სხივი. პოულობს, რომელ ობიექტს ეჯახება.">
+     <path class="o" d="M90 162 L328 196" stroke="var(--hot)" stroke-width="3" fill="none" marker-end="url(#arh)"/></g>
+    <g class="hs" data-t="ობიექტი" data-d="სხივის შეხების წერტილში GPU ითვლის ფერს: მასალას, განათებას, ანარეკლს.">
+     <circle class="o" cx="380" cy="220" r="62" fill="var(--cpu)"/><ellipse cx="358" cy="196" rx="18" ry="12" fill="#fff" opacity=".45"/></g>
+    <g class="hs" data-t="ჩრდილის სხივი" data-d="შეხების წერტილიდან სინათლისკენ იგზავნება. თუ გზაზე რამე უშლის — წერტილი ჩრდილშია.">
+     <path class="o" d="M336 186 L506 72" stroke="var(--gpu)" stroke-width="3" stroke-dasharray="7 5" fill="none" marker-end="url(#arg)"/></g>
+    <g class="hs" data-t="ჩრდილი" data-d="ობიექტი სინათლეს ფარავს — Ray Tracing ჩრდილს ზუსტად, რბილი კიდეებით ითვლის.">
+     <ellipse class="o" cx="320" cy="312" rx="80" ry="10" fill="var(--ink)" opacity=".35"/></g>
+    <g class="hs" data-t="ანარეკლის სხივი" data-d="სხივი ზედაპირიდან აირეკლება და აჩვენებს, რა უნდა ჩანდეს ანარეკლში.">
+     <path class="o" d="M250 300 L215 255" stroke="var(--hot)" stroke-width="2.5" fill="none" marker-end="url(#arh)"/>
+     <path d="M180 192 L250 300" stroke="var(--hot)" stroke-width="2.5" fill="none" stroke-dasharray="3 4"/>
+     <ellipse cx="380" cy="324" rx="40" ry="8" fill="var(--cpu)" opacity=".35"/></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი სხივზე ან ობიექტზე</b><span>კამერა → პიქსელი → ობიექტი → სინათლე</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 19 AI -->
+<section class="slide gpuS" data-sec="gpu" data-title="AI და GPU">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>ხელოვნური ინტელექტი და GPU</h2>
+ <div class="grid">
+  <div class="txt">
+   <p>თანამედროვე GPU-ები AI ამოცანებშიც გამოიყენება. ნეირონული ქსელი — ეს არის <b>მილიონობით ერთნაირი მათემატიკური ოპერაცია</b> (გამრავლება და შეკრება), რაც პარალელურად კეთდება — ზუსტად ის, რაშიც GPU ძლიერია.</p>
+   <ul><li>Machine Learning</li><li>Neural Network-ები</li><li>გამოსახულების დამუშავება</li><li>გენერაციული AI</li><li>მონაცემთა ანალიზი</li></ul>
+   <div class="note">ზოგ GPU-ს აქვს <b>სპეციალიზებული AI ბლოკები</b> (Tensor Cores, AI Accelerators).</div>
+  </div>
+  <div class="fig">
+   <svg viewBox="0 0 600 340" id="nnSvg" role="img" aria-label="ნეირონული ქსელი">
+    <g class="hs" data-t="წონები (კავშირები)" data-d="თითო ხაზი — ერთი რიცხვი (წონა). გამოთვლისას თითოეული გამრავლდება და შეიკრიბება. დიდ მოდელებში მილიარდობით წონაა.">
+     <g id="nnLinks" class="o" stroke="var(--muted)" stroke-opacity=".45" stroke-width="1.4"></g></g>
+    <g class="hs" data-t="შემავალი ფენა" data-d="მონაცემები შედის: მაგ. სურათის პიქსელები ან ტექსტი რიცხვების სახით.">
+     <g id="nnIn" class="o"></g></g>
+    <g class="hs" data-t="ფარული ფენები" data-d="აქ ხდება ძირითადი გამოთვლა. თითო ფენა = დიდი მატრიცული გამრავლება — GPU მას ათასობით ბირთვზე ერთდროულად ასრულებს.">
+     <g id="nnHid" class="o"></g></g>
+    <g class="hs" data-t="გამომავალი ფენა" data-d="შედეგი: მაგ. „ეს კატაა — 97%“ ან შემდეგი სიტყვა.">
+     <g id="nnOut" class="o"></g></g>
+    <text x="70" y="330" text-anchor="middle" class="sm mu">შესავალი</text><text x="300" y="330" text-anchor="middle" class="sm mu">ფარული ფენები</text><text x="530" y="330" text-anchor="middle" class="sm mu">შედეგი</text>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი ფენაზე</b><span>რატომ არის GPU AI-სთვის იდეალური.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 20 GPU COOLING -->
+<section class="slide gpuS" data-sec="gpu" data-title="GPU-ის გაგრილება">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>ვიდეო ბარათის გაგრილება</h2>
+ <div class="grid">
+  <div class="txt">
+   <p>ძლიერი GPU დიდი დატვირთვისას მნიშვნელოვან სითბოს წარმოქმნის. ვიდეო ბარათებში გვხვდება: <b>Heatsink, Fans, Heat Pipes, Vapor Chamber</b>.</p>
+   <p>გაგრილების ხარისხი მოქმედებს:</p>
+   <ul><li>ტემპერატურაზე</li><li>სტაბილურობაზე</li><li>ხმაურზე</li><li>Boost სიხშირის შენარჩუნებაზე</li><li>ხანგრძლივ მუშაობაზე</li></ul>
+  </div>
+  <div class="fig">
+   <p class="hint">ვიდეო ბარათის განივი ჭრილი</p>
+   <svg viewBox="0 0 640 330" role="img" aria-label="ვიდეო ბარათის გაგრილების ჭრილი">
+    <g class="hs" data-t="ვენტილატორები" data-d="ცივ ჰაერს ქვემოდან რადიატორში ატარებენ.">
+     <g fill="var(--fanbg)" stroke="var(--fan)" stroke-width="2"><rect class="o" x="60" y="20" width="150" height="26" rx="13"/><rect x="245" y="20" width="150" height="26" rx="13"/><rect x="430" y="20" width="150" height="26" rx="13"/></g></g>
+    <g class="hs" data-t="ჰაერის ნაკადი" data-d="ჰაერი შედის რადიატორში და გამოდის გვერდებიდან — კორპუსში კარგი ვენტილაცია მნიშვნელოვანია.">
+     <g fill="none" stroke="var(--cpu)" stroke-width="2.5" marker-end="url(#ar)"><path class="o" d="M135 0 V16"/><path d="M320 0 V16"/><path d="M505 0 V16"/></g>
+     <g fill="none" stroke="var(--hot)" stroke-width="2.5" marker-end="url(#arh)"><path d="M40 110 H6"/><path d="M600 110 H634"/></g></g>
+    <g class="hs" data-t="რადიატორი (Fin stack)" data-d="ასობით თხელი ალუმინის ფირფიტა — რაც დიდია ზედაპირი, მით უკეთ გადაეცემა სითბო ჰაერს.">
+     <rect class="o" x="40" y="54" width="560" height="110" fill="url(#fins)" stroke="var(--fin)"/></g>
+    <g class="hs" data-t="სითბური მილები (ჭრილში)" data-d="სპილენძის მილები რადიატორში გადის და სითბოს თანაბრად ანაწილებს.">
+     <g fill="var(--copper)" stroke="var(--panel)" stroke-width="2"><circle class="o" cx="200" cy="140" r="11"/><circle cx="260" cy="140" r="11"/><circle cx="320" cy="140" r="11"/><circle cx="380" cy="140" r="11"/><circle cx="440" cy="140" r="11"/></g></g>
+    <g class="hs" data-t="Vapor Chamber — ორთქლის კამერა" data-d="ბრტყელი დახურული ფირფიტა სითხით. სითხე ორთქლდება GPU-ს თავზე და სითბოს მთელ ზედაპირზე ძალიან სწრაფად ანაწილებს.">
+     <rect class="o" x="170" y="166" width="300" height="16" rx="4" fill="var(--copper)" opacity=".75"/></g>
+    <g class="hs" data-t="თერმოპასტა" data-d="GPU ჩიპსა და Vapor Chamber-ს შორის — სითბოს კარგი გადაცემისთვის.">
+     <rect class="o" x="282" y="182" width="76" height="6" fill="var(--metal)"/></g>
+    <g class="hs" data-t="GPU ჩიპი" data-d="მთავარი სითბოს წყარო — ძლიერ ბარათებზე 200–450W.">
+     <rect class="o" x="282" y="188" width="76" height="22" fill="var(--die)"/><text x="320" y="204" text-anchor="middle" class="lw sm">GPU</text></g>
+    <g class="hs" data-t="თერმო ბალიშები (Thermal pads)" data-d="რბილი ბალიშები VRAM-სა და VRM-ზე — მათ სითბოსაც რადიატორს აწვდიან.">
+     <g fill="var(--hot)" opacity=".7"><rect class="o" x="200" y="186" width="54" height="8"/><rect x="386" y="186" width="54" height="8"/><rect x="490" y="186" width="70" height="8"/></g></g>
+    <g class="hs" data-t="VRAM და VRM" data-d="მეხსიერებაც და კვების ფაზებიც ცხელდება და გაგრილებას საჭიროებს.">
+     <g fill="var(--shroud)"><rect class="o" x="200" y="194" width="54" height="16"/><rect x="386" y="194" width="54" height="16"/><rect x="490" y="194" width="70" height="16" fill="var(--metal)"/></g></g>
+    <g class="hs" data-t="PCB" data-d="ბეჭდური დაფა, რომელზეც ყველა კომპონენტია.">
+     <rect class="o" x="40" y="210" width="560" height="18" fill="var(--pcb)"/></g>
+    <g class="hs" data-t="Backplate" data-d="უკანა მეტალის ფირფიტა — სიმტკიცე და დამატებითი სითბოს გაფანტვა.">
+     <rect class="o" x="40" y="236" width="560" height="12" rx="3" fill="var(--metal)"/></g>
+    <text x="320" y="290" text-anchor="middle" class="sm mu">სითბო მოძრაობს: GPU → Vapor Chamber → სითბური მილები → რადიატორი → ჰაერი</text>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი ფენაზე</b><span>გაგრილების სისტემის შრეები.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 21 POWER -->
+<section class="slide gpuS" data-sec="gpu" data-title="კვება და ენერგომოხმარება">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>კვება და ენერგომოხმარება</h2>
+ <div class="grid even">
+  <div class="fig">
+   <svg viewBox="0 0 560 330" role="img" aria-label="კვების ბლოკის კავშირები">
+    <g class="hs" data-t="PSU — კვების ბლოკი" data-d="ქსელის ცვლად დენს კომპონენტებისთვის საჭირო მუდმივ ძაბვად (12V, 5V, 3.3V) გარდაქმნის. მისი სიმძლავრე ყველა კომპონენტისთვის უნდა იყოს საკმარისი.">
+     <rect class="o" x="10" y="110" width="140" height="110" rx="10" fill="var(--shroud)"/><use href="#fan" x="45" y="130" width="70" height="70"/><text x="80" y="242" text-anchor="middle" class="lb">PSU</text></g>
+    <g class="hs" data-t="24-pin — დედაპლატის კვება" data-d="ძირითადი კაბელი დედაპლატისთვის.">
+     <path class="o" d="M150 135 C220 135 220 50 300 50" stroke="var(--muted)" stroke-width="6" fill="none"/>
+     <rect x="300" y="30" width="240" height="40" rx="8" fill="var(--panel2)" stroke="var(--line)"/><text x="420" y="56" text-anchor="middle" class="lb">დედაპლატა · 24-pin</text></g>
+    <g class="hs" data-t="EPS 8-pin — CPU-ის კვება" data-d="ცალკე კაბელი პროცესორისთვის, დედაპლატის ზედა ნაწილში.">
+     <path class="o" d="M150 160 C230 160 230 120 300 120" stroke="var(--cpu)" stroke-width="6" fill="none"/>
+     <rect x="300" y="100" width="240" height="40" rx="8" fill="var(--cpu-soft)" stroke="var(--cpu)"/><text x="420" y="126" text-anchor="middle" class="lb">CPU · 8-pin EPS</text></g>
+    <g class="hs" data-t="PCIe 8-pin / 12V-2x6 — GPU-ის კვება" data-d="ძლიერი ვიდეო ბარათები დამატებით კვებას იღებენ: 8-pin = 150W-მდე, 12V-2x6 (16-pin) = 600W-მდე.">
+     <path class="o" d="M150 195 C230 195 230 200 300 200" stroke="var(--gpu)" stroke-width="6" fill="none"/>
+     <rect x="300" y="180" width="240" height="40" rx="8" fill="var(--gpu-soft)" stroke="var(--gpu)"/><text x="420" y="206" text-anchor="middle" class="lb">GPU · 8-pin / 16-pin</text></g>
+    <g class="hs" data-t="PCIe სლოტი — 75W" data-d="სუსტ ვიდეო ბარათებს დედაპლატის სლოტიდან მიღებული 75W საკმარისია და დამატებითი კაბელი არ სჭირდებათ.">
+     <rect class="o" x="300" y="250" width="240" height="40" rx="8" fill="var(--panel2)" stroke="var(--gold)" stroke-width="2"/><text x="420" y="276" text-anchor="middle" class="lb">PCIe სლოტი → 75W</text></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი კაბელზე</b><span>რომელ კომპონენტს რა კვება სჭირდება.</span></div>
+  </div>
+  <div class="txt">
+   <p>ენერგომოხმარება დამოკიდებულია GPU-ის <b>მოდელზე, დატვირთვაზე, არქიტექტურაზე, სიხშირეზე</b> და ენერგიის მართვის რეჟიმზე.</p>
+   <div class="card">
+    <h3>კვების ბლოკის კალკულატორი</h3>
+    <div class="ctl">
+     <label>CPU: <span id="cpuW">65</span> W<input type="range" id="cpuR" min="35" max="250" step="5" value="65"></label>
+     <label>GPU: <span id="gpuW">200</span> W<input type="range" id="gpuR" min="0" max="450" step="10" value="200"></label>
+    </div>
+    <p style="margin:.3em 0">დანარჩენი (დედაპლატა, RAM, SSD, ვენტილატორები) ≈ 75 W</p>
+    <div>სისტემა: <b id="sysW">340</b> W → რეკომენდებული PSU:</div>
+    <div class="big-num" id="psuW">550 W</div>
+    <p class="hint" style="margin-top:6px">რეზერვი ~40%: ბლოკი არ უნდა მუშაობდეს ზღვარზე და დატვირთვის მოკლე პიკებსაც უნდა გაუძლოს.</p>
+   </div>
+  </div>
+ </div>
+</section>
+<!-- 22 OUTPUTS -->
+<section class="slide gpuS" data-sec="gpu" data-title="ვიდეო გამოსასვლელები">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>ვიდეო გამოსასვლელები: HDMI და DisplayPort</h2>
+ <div class="fig">
+  <p class="hint">ვიდეო ბარათის სამაგრი (პორტების მხრიდან)</p>
+  <svg viewBox="0 0 700 220" role="img" aria-label="ვიდეო პორტები">
+   <rect x="10" y="20" width="680" height="150" rx="10" fill="var(--metal)"/>
+   <g fill="var(--fin)" opacity=".5"><rect x="30" y="30" width="640" height="8" rx="4"/><rect x="30" y="152" width="640" height="8" rx="4"/></g>
+   <g class="hs" data-t="DisplayPort" data-d="ხშირად გამოიყენება კომპიუტერულ მონიტორებში. DP 1.4: 4K@120Hz+, DP 2.1: 4K@240Hz და 8K. მაღალი განახლების სიხშირის სათამაშო მონიტორებისთვის საუკეთესოა. ერთი კუთხე დახრილია.">
+    <path class="o" d="M40 70 h110 v44 h-96 l-14 -14z" fill="var(--shroud)" stroke="var(--ink)"/><rect x="52" y="84" width="88" height="12" rx="2" fill="var(--gold)"/>
+    <path d="M170 70 h110 v44 h-96 l-14 -14z" fill="var(--shroud)"/><rect x="182" y="84" width="88" height="12" rx="2" fill="var(--gold)"/>
+    <text x="160" y="200" text-anchor="middle" class="lb">DisplayPort ×2</text></g>
+   <g class="hs" data-t="HDMI" data-d="ყველაზე გავრცელებული: მონიტორი, ტელევიზორი, პროექტორი. გადასცემს გამოსახულებას და ხმას. HDMI 2.1: 4K@120Hz, 8K@60Hz.">
+    <path class="o" d="M310 70 h120 v30 l-12 14 h-96 l-12 -14z" fill="var(--shroud)" stroke="var(--ink)"/><rect x="326" y="82" width="88" height="10" rx="2" fill="var(--gold)"/>
+    <text x="370" y="200" text-anchor="middle" class="lb">HDMI</text></g>
+   <g class="hs" data-t="DVI (ძველი)" data-d="ძველი ციფრული პორტი. მაქსიმუმ 2560×1600. დღეს ახალ ბარათებზე აღარ გვხვდება.">
+    <rect class="o" x="460" y="62" width="104" height="58" rx="6" fill="var(--shroud)" stroke="var(--ink)"/>
+    <g fill="var(--metal)" id="dviPins"></g>
+    <text x="512" y="200" text-anchor="middle" class="lb">DVI</text></g>
+   <g class="hs" data-t="VGA (ძველი, ანალოგური)" data-d="ძალიან ძველი ანალოგური პორტი, 15 კონტაქტით. ხარისხი დაბალია; გვხვდება ძველ მონიტორებსა და პროექტორებში.">
+    <path class="o" d="M590 66 h86 l-8 50 h-70z" fill="var(--hot)" opacity=".8" stroke="var(--ink)"/>
+    <g fill="var(--shroud)" id="vgaPins"></g>
+    <text x="633" y="200" text-anchor="middle" class="lb">VGA</text></g>
+  </svg>
+  <div class="cap"><b>მიიტანეთ მაუსი პორტზე</b><span>შესაძლებლობები და გამოყენება.</span></div>
+ </div>
+ <div class="tw" style="margin-top:14px"><table>
+  <thead><tr><th>პორტი</th><th>სიგნალი</th><th>ხმა</th><th>ტიპური მაქსიმუმი</th><th>სად გამოიყენება</th></tr></thead>
+  <tbody>
+   <tr><td><b>HDMI 2.1</b></td><td>ციფრული</td><td>✓</td><td>4K 120Hz / 8K 60Hz</td><td>მონიტორი, ტელევიზორი, პროექტორი</td></tr>
+   <tr><td><b>DisplayPort 1.4 / 2.1</b></td><td>ციფრული</td><td>✓</td><td>4K 120–240Hz</td><td>კომპიუტერული და სათამაშო მონიტორები</td></tr>
+   <tr><td><b>DVI</b></td><td>ციფრული</td><td>✗</td><td>2560×1600</td><td>ძველი მონიტორები</td></tr>
+   <tr><td><b>VGA</b></td><td>ანალოგური</td><td>✗</td><td>დაბალი ხარისხი</td><td>ძალიან ძველი მოწყობილობები</td></tr>
+  </tbody></table></div>
+</section>
+
+<!-- 23 RESOLUTION -->
+<section class="slide gpuS" data-sec="gpu" data-title="Resolution — გარჩევადობა">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>Resolution — გარჩევადობა</h2>
+ <div class="grid">
+  <div class="txt">
+   <p><b>გარჩევადობა</b> განსაზღვრავს გამოსახულების პიქსელების რაოდენობას.</p>
+   <ul><li><b>1920 × 1080</b> — Full HD</li><li><b>2560 × 1440</b> — QHD</li><li><b>3840 × 2160</b> — 4K</li></ul>
+   <div class="note">რაც მაღალია გარჩევადობა, მით <b>მეტი პიქსელის დამუშავება</b> სჭირდება GPU-ს. 4K-ში 4-ჯერ მეტი პიქსელია, ვიდრე Full HD-ში — ამიტომ მას ძლიერი GPU სჭირდება.</div>
+  </div>
+  <div class="fig">
+   <p class="hint">მართკუთხედები ზომის პროპორციით</p>
+   <svg viewBox="0 0 600 350" role="img" aria-label="გარჩევადობების შედარება">
+    <g class="hs" data-t="4K — 3840 × 2160" data-d="8 294 400 პიქსელი — Full HD-ზე 4-ჯერ მეტი. საჭიროა მაღალი კლასის GPU თამაშებისთვის.">
+     <rect class="o" x="10" y="10" width="576" height="324" rx="4" fill="var(--gpu-soft)" stroke="var(--gpu)" stroke-width="2"/><text x="570" y="320" text-anchor="end" class="lb">4K · 8.3 მლნ პიქსელი</text></g>
+    <g class="hs" data-t="QHD — 2560 × 1440" data-d="3 686 400 პიქსელი — Full HD-ზე 1.8-ჯერ მეტი. პოპულარული სათამაშო მონიტორებში.">
+     <rect class="o" x="10" y="10" width="384" height="216" rx="4" fill="var(--cpu-soft)" stroke="var(--cpu)" stroke-width="2"/><text x="380" y="212" text-anchor="end" class="lb">QHD · 3.7 მლნ</text></g>
+    <g class="hs" data-t="Full HD — 1920 × 1080" data-d="2 073 600 პიქსელი. ყველაზე გავრცელებული გარჩევადობა — საშუალო GPU-საც კარგად შეუძლია.">
+     <rect class="o" x="10" y="10" width="288" height="162" rx="4" fill="var(--panel2)" stroke="var(--ink)" stroke-width="2"/><text x="154" y="96" text-anchor="middle" class="lb">Full HD · 2.1 მლნ</text></g>
+   </svg>
+   <div class="cap"><b>მიიტანეთ მაუსი გარჩევადობაზე</b><span>პიქსელების რაოდენობა.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 24 REFRESH -->
+<section class="slide gpuS" data-sec="gpu" data-title="Refresh Rate">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>Refresh Rate — განახლების სიხშირე</h2>
+ <div class="grid">
+  <div class="txt">
+   <p><b>Refresh Rate</b> მიუთითებს, რამდენჯერ ახლდება ეკრანის გამოსახულება ერთ წამში. იზომება <b>ჰერცებში (Hz)</b>.</p>
+   <div class="chips"><span class="chip">60 Hz</span><span class="chip">75 Hz</span><span class="chip">120 Hz</span><span class="chip">144 Hz</span><span class="chip">165 Hz</span><span class="chip">240 Hz</span></div>
+   <p>მაღალი სიხშირე განსაკუთრებით მნიშვნელოვანია სწრაფ თამაშებში — მოძრაობა უფრო გლუვი ჩანს.</p>
+   <div class="note">144 Hz მონიტორის გამოსაყენებლად <b>GPU-მაც უნდა შეძლოს 144 კადრი წამში (FPS)</b>.</div>
+  </div>
+  <div class="fig">
+   <p class="hint">დააკვირდით ბურთის მოძრაობას (სიმულაცია)</p>
+   <div class="hs" data-t="30 Hz" data-d="წამში 30 განახლება — კადრებს შორის 33 მს. მოძრაობა „ხტუნვით“ ჩანს."><b>30 Hz</b> · 33.3 მს/კადრი<div class="track"><div class="ball" data-hz="30"></div></div></div>
+   <div class="hs" data-t="60 Hz" data-d="სტანდარტული მონიტორი — 16.7 მს კადრებს შორის. საკმარისია ოფისისა და ვიდეოსთვის."><b>60 Hz</b> · 16.7 მს/კადრი<div class="track"><div class="ball" data-hz="60"></div></div></div>
+   <div class="hs" data-t="144 Hz" data-d="სათამაშო მონიტორი — 6.9 მს კადრებს შორის. ძალიან გლუვი მოძრაობა."><b>144 Hz</b> · 6.9 მს/კადრი<div class="track"><div class="ball" data-hz="144"></div></div></div>
+   <div class="cap"><b>მიიტანეთ მაუსი ზოლზე</b><span>შენიშვნა: თქვენი ეკრანი მაქსიმუმ თავის სიხშირეს აჩვენებს.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 25 iGPU vs dGPU -->
+<section class="slide" data-sec="gpu" data-title="Integrated vs Dedicated GPU">
+ <div class="sh"><span class="no"></span><span class="tag gpu">GPU</span></div>
+ <h2>Integrated GPU vs Dedicated GPU</h2>
+ <div class="cols2">
+  <div class="card cpuB">
+   <h3>Integrated GPU (iGPU)</h3>
+   <p>ჩაშენებულია პროცესორში ან იმავე პლატფორმაში.</p>
+   <b>უპირატესობები</b>
+   <div class="txt"><ul><li>დაბალი ენერგომოხმარება</li><li>დაბალი ფასი</li><li>ცალკე ვიდეო ბარათი არ არის საჭირო</li></ul></div>
+   <b>გამოსადეგია</b>
+   <div class="chips"><span class="chip">ოფისი</span><span class="chip">ინტერნეტი</span><span class="chip">ყოველდღიური გამოყენება</span><span class="chip">მსუბუქი გრაფიკა</span></div>
+  </div>
+  <div class="card gpuB">
+   <h3>Dedicated GPU (ცალკე ვიდეო ბარათი)</h3>
+   <p>ცალკე მოწყობილობა თავისი მეხსიერებით (VRAM) და გაგრილებით.</p>
+   <b>უპირატესობები</b>
+   <div class="txt gpuS"><ul><li>მაღალი გრაფიკული წარმადობა</li><li>უკეთესი შესაძლებლობები თამაშებში</li><li>უკეთესი 3D მუშაობა</li><li>მეტი წარმადობა პროფესიონალური სამუშაოებისთვის</li></ul></div>
+   <b>გამოსადეგია</b>
+   <div class="chips"><span class="chip">თამაშები</span><span class="chip">3D</span><span class="chip">ვიდეომონტაჟი</span><span class="chip">AI</span></div>
+  </div>
+ </div>
+ <div class="tw" style="margin-top:14px"><table>
+  <thead><tr><th></th><th>iGPU</th><th>Dedicated GPU</th></tr></thead>
+  <tbody>
+   <tr><td><b>მეხსიერება</b></td><td>იყენებს RAM-ს</td><td>საკუთარი VRAM (8–24 GB)</td></tr>
+   <tr><td><b>ენერგია</b></td><td>რამდენიმე–ათეული W</td><td>75–450 W</td></tr>
+   <tr><td><b>გაგრილება</b></td><td>CPU-ის გამაგრილებელი</td><td>საკუთარი ვენტილატორები/რადიატორი</td></tr>
+   <tr><td><b>ფასი</b></td><td>შედის CPU-ის ფასში</td><td>დამატებითი ხარჯი</td></tr>
+  </tbody></table></div>
+</section>
+
+<!-- 26 CPU vs GPU -->
+<section class="slide" data-sec="both" data-title="CPU vs GPU">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span><span class="tag gpu">GPU</span></div>
+ <h2>CPU vs GPU</h2>
+ <div class="tw"><table>
+  <thead><tr><th style="color:var(--cpu-ink)">CPU</th><th style="color:var(--gpu-ink)">GPU</th></tr></thead>
+  <tbody>
+   <tr><td>ცენტრალური პროცესორია</td><td>გრაფიკული პროცესორია</td></tr>
+   <tr><td>უნივერსალური ამოცანებისთვისაა შექმნილი</td><td>პარალელური გამოთვლებისთვისაა ოპტიმიზებული</td></tr>
+   <tr><td>შედარებით მცირე რაოდენობის ძლიერი ბირთვები</td><td>დიდი რაოდენობის პარალელური დამუშავების რესურსი</td></tr>
+   <tr><td>მართავს პროგრამების ძირითად ლოგიკას</td><td>ამუშავებს გრაფიკასა და პარალელურ ოპერაციებს</td></tr>
+   <tr><td>მნიშვნელოვანია სისტემის საერთო მუშაობისთვის</td><td>განსაკუთრებით მნიშვნელოვანია გრაფიკისთვის</td></tr>
+  </tbody></table></div>
+ <div class="cols2" style="margin-top:16px">
+  <div class="card cpuB"><div class="big-num" style="color:var(--cpu)">CPU</div><b>უნივერსალური დამუშავება</b> — რთული ამოცანები თანმიმდევრულად და სწრაფად.</div>
+  <div class="card gpuB"><div class="big-num" style="color:var(--gpu)">GPU</div><b>მასიური პარალელური დამუშავება</b> — უამრავი მარტივი ამოცანა ერთდროულად.</div>
+ </div>
+</section>
+
+<!-- 27 TOGETHER -->
+<section class="slide" data-sec="both" data-title="CPU და GPU ერთად">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span><span class="tag gpu">GPU</span></div>
+ <h2>როგორ მუშაობენ CPU და GPU ერთად — თამაშის მაგალითი</h2>
+ <div class="fig">
+  <svg viewBox="0 0 760 300" role="img" aria-label="თამაშის კადრის შექმნის პროცესი">
+   <g fill="none" stroke="var(--muted)" stroke-width="2.5" marker-end="url(#ar)"><path d="M130 150 H158"/><path d="M370 150 H398"/><path d="M490 150 H518"/><path d="M640 150 H668"/></g>
+   <g class="hs" data-t="მოთამაშის მოქმედება" data-d="კლავიატურა, მაუსი ან ჯოისტიკი — CPU იღებს ამ ინფორმაციას.">
+    <rect class="o" x="10" y="110" width="120" height="80" rx="12" fill="var(--panel2)" stroke="var(--line)"/><text x="70" y="146" text-anchor="middle" class="lb">მოქმედება</text><text x="70" y="168" text-anchor="middle" class="sm mu">კლავიატურა</text></g>
+   <g class="hs" data-t="CPU-ის სამუშაო" data-d="ამუშავებს თამაშის ლოგიკას, ფიზიკას, პერსონაჟების AI-ს, ხმას და სისტემურ ამოცანებს. შემდეგ GPU-ს უგზავნის ბრძანებებს — რა დახატოს (draw calls).">
+    <rect class="o" x="162" y="30" width="208" height="240" rx="14" fill="var(--cpu-soft)" stroke="var(--cpu)" stroke-width="2"/>
+    <text x="266" y="62" text-anchor="middle" class="lb" style="font-size:18px">CPU</text>
+    <g class="sm"><text x="182" y="100">• თამაშის ლოგიკა</text><text x="182" y="128">• პროცესების მართვა</text><text x="182" y="156">• AI და ფიზიკა</text><text x="182" y="184">• სისტემური ამოცანები</text><text x="182" y="212">• ბრძანებები GPU-ს</text></g></g>
+   <g class="hs" data-t="PCIe — კავშირი" data-d="CPU ბრძანებებს და მონაცემებს GPU-ს PCIe სალტით უგზავნის.">
+    <rect class="o" x="402" y="120" width="88" height="60" rx="10" fill="var(--panel2)" stroke="var(--gold)" stroke-width="2"/><text x="446" y="155" text-anchor="middle" class="lb">PCIe</text></g>
+   <g class="hs" data-t="GPU-ის სამუშაო" data-d="ქმნის გამოსახულებას: გეომეტრია, ტექსტურები, განათება, ჩრდილები და ვიზუალური ეფექტები — მილიონობით პიქსელი ყოველ კადრში.">
+    <rect class="o" x="522" y="30" width="118" height="240" rx="14" fill="var(--gpu-soft)" stroke="var(--gpu)" stroke-width="2"/>
+    <text x="581" y="62" text-anchor="middle" class="lb" style="font-size:18px">GPU</text>
+    <g class="sm"><text x="534" y="100">• გრაფიკა</text><text x="534" y="128">• გამოსახულება</text><text x="534" y="156">• განათება</text><text x="534" y="184">• ტექსტურები</text><text x="534" y="212">• ეფექტები</text></g></g>
+   <g class="hs" data-t="მონიტორი — კადრი" data-d="მზა კადრი მონიტორზე გამოდის. ეს ციკლი წამში 60–240-ჯერ მეორდება (FPS).">
+    <rect class="o" x="672" y="105" width="80" height="60" rx="6" fill="var(--shroud)"/><rect x="680" y="113" width="64" height="44" fill="var(--gpu)" opacity=".6"/><rect x="702" y="165" width="20" height="14" fill="var(--metal)"/><text x="712" y="205" text-anchor="middle" class="sm lb">კადრი</text></g>
+  </svg>
+  <div class="cap"><b>მიიტანეთ მაუსი ეტაპზე</b><span>საბოლოოდ ორივე კომპონენტი ერთად უზრუნველყოფს თამაშის მუშაობას.</span></div>
+ </div>
+</section>
+
+<!-- 28 BOTTLENECK -->
+<section class="slide" data-sec="both" data-title="Bottleneck">
+ <div class="sh"><span class="no"></span><span class="tag cpu">CPU</span><span class="tag gpu">GPU</span></div>
+ <h2>Bottleneck — წარმადობის შემზღუდავი</h2>
+ <div class="grid even">
+  <div class="txt">
+   <p><b>Bottleneck</b> („ბოთლის ყელი“) — კომპონენტი, რომელიც მთელი სისტემის წარმადობას ზღუდავს.</p>
+   <ul><li><b>ძლიერი GPU + სუსტი CPU</b> → CPU ვერ ასწრებს ბრძანებების მიწოდებას; GPU „ელოდება“.</li><li><b>ძლიერი CPU + სუსტი GPU</b> → გრაფიკულ თამაშებში GPU ხდება შეზღუდვა.</li></ul>
+   <div class="note">მიზანია კომპონენტების <b>დაბალანსებული კომბინაცია</b>.</div>
+  </div>
+  <div class="card">
+   <h3>სიმულატორი — გადაწიეთ ზოლები</h3>
+   <div class="ctl">
+    <label>CPU-ის სიძლიერე (რამდენ კადრს ამზადებს): <span id="bnCv"></span><input type="range" id="bnC" min="20" max="240" value="160"></label>
+    <label>GPU-ის სიძლიერე (რამდენ კადრს ხატავს): <span id="bnGv"></span><input type="range" id="bnG" min="20" max="240" value="70"></label>
+   </div>
+   <div class="meter"><i id="bnCi" style="background:var(--cpu)"></i><span>CPU</span></div>
+   <div class="meter" style="margin-top:6px"><i id="bnGi" style="background:var(--gpu)"></i><span>GPU</span></div>
+   <p style="margin:.8em 0 .2em">შედეგი თამაშში:</p>
+   <div class="big-num" id="bnFps">70 FPS</div>
+   <p id="bnMsg" style="font-weight:700;margin:.4em 0 0"></p>
+  </div>
+ </div>
+</section>
+
+<!-- 29 CHOOSE -->
+<section class="slide" data-sec="both" data-title="როგორ შევარჩიოთ CPU და GPU">
+ <div class="sh"><span class="no"></span><span class="tag both">შერჩევა</span></div>
+ <h2>როგორ შევარჩიოთ CPU და GPU?</h2>
+ <div class="chain">
+  <div><b>საჭიროება</b>ოფისი, სწავლა, პროგრამირება, თამაშები, ვიდეომონტაჟი, 3D, AI</div>
+  <div><b>ბიუჯეტი</b>რამდენი თანხა გვაქვს კომპიუტერისთვის?</div>
+  <div><b>CPU-ის მოთხოვნები</b>Core, Thread, Clock, Cache, Architecture, TDP</div>
+  <div><b>GPU-ის მოთხოვნები</b>Architecture, Cores, Ray Tracing, AI, ენერგია, გაგრილება, პორტები</div>
+ </div>
+ <div class="card">
+  <h3 style="margin-top:0">აირჩიეთ საჭიროება:</h3>
+  <div class="seg" id="useSeg"></div>
+  <div class="cols2" style="margin-top:10px">
+   <div><b style="color:var(--cpu-ink)">CPU</b><p id="useC" style="margin:.2em 0"></p></div>
+   <div><b style="color:var(--gpu-ink)">GPU</b><p id="useG" style="margin:.2em 0"></p></div>
+  </div>
+  <p id="useN" class="hint" style="margin:0"></p>
+ </div>
+ <p class="quote" style="font-size:1.2rem">ავირჩიოთ არა უბრალოდ „ყველაზე ძლიერი“, არამედ კონკრეტული საჭიროებისთვის შესაფერისი კომპონენტი.</p>
+</section>
+
+<!-- 30 TASK -->
+<section class="slide" data-sec="both" data-title="პრაქტიკული დავალება">
+ <div class="sh"><span class="no"></span><span class="tag both">დავალება</span></div>
+ <h2>დავალება: მოძებნეთ და შეადარეთ 2 CPU და 2 GPU</h2>
+ <p class="lead">მონიშნეთ, რომელი მონაცემი უკვე იპოვეთ.</p>
+ <div class="grid even">
+  <div class="card cpuB chk" id="chkCpu"><h3>CPU-ისთვის მოიძიეთ</h3></div>
+  <div class="card gpuB chk" id="chkGpu"><h3>GPU-ისთვის მოიძიეთ</h3></div>
+ </div>
+ <div class="card" style="margin-top:14px">
+  <h3 style="margin-top:0">მეორე ნაწილი — უპასუხეთ</h3>
+  <ol>
+   <li>რომელი CPU არის უკეთესი და რატომ?</li><li>რომელი GPU არის უკეთესი და რატომ?</li><li>რომელ CPU/GPU კომბინაციას აირჩევდით?</li><li>რომელი კომბინაცია იქნებოდა კარგი Gaming-ისთვის?</li><li>რომელი — Office/სასწავლო სამუშაოებისთვის?</li><li>რომელი — 3D/ვიდეომონტაჟისთვის?</li><li>არის თუ არა აუცილებელი ყველაზე ძვირადღირებული კომპონენტის არჩევა?</li><li>დაასაბუთეთ არჩევანი ტექნიკური მახასიათებლებით.</li>
+  </ol>
+ </div>
+</section>
+
+<!-- 31 ACTIVITY + ASSESSMENT -->
+<section class="slide" data-sec="both" data-title="აქტივობა და შეფასება">
+ <div class="sh"><span class="no"></span><span class="tag both">აქტივობა</span></div>
+ <h2>აქტივობა გაკვეთილზე და შეფასება</h2>
+ <div class="grid even">
+  <div>
+   <div class="quote" style="font-size:1.15rem;margin-top:0">„მომხმარებელს სურს კომპიუტერი სწავლისთვის, პროგრამირებისთვის და ზოგჯერ თამაშებისთვის. ბიუჯეტი შეზღუდულია.“</div>
+   <div class="card"><b>მოსწავლემ უნდა:</b>
+    <ol style="margin:.4em 0 0"><li>განსაზღვროს მომხმარებლის საჭიროება</li><li>შეარჩიოს CPU</li><li>შეარჩიოს GPU</li><li>მოძებნოს ორი ალტერნატიული ვარიანტი</li><li>შეადაროს ტექნიკური მახასიათებლები</li><li>შეადაროს ფასები</li><li>აირჩიოს საუკეთესო ვარიანტი</li><li>ახსნას არჩევანი</li></ol></div>
+  </div>
+  <div class="card"><h3 style="margin-top:0">შეფასების კრიტერიუმები</h3><div id="crit"></div></div>
+ </div>
+</section>
+
+<!-- 32 QUESTIONS -->
+<section class="slide" data-sec="both" data-title="შემაჯამებელი კითხვები">
+ <div class="sh"><span class="no"></span><span class="tag both">კითხვები</span></div>
+ <h2>შეამოწმეთ თავი</h2>
+ <p class="lead">დააჭირეთ ბარათს პასუხის სანახავად.</p>
+ <div class="flips" id="flips"></div>
+</section>
+
+<!-- 33 CONCLUSION -->
+<section class="slide" data-sec="both" data-title="დასკვნა">
+ <div class="sh"><span class="no"></span><span class="tag both">დასკვნა</span></div>
+ <h2>დასკვნა</h2>
+ <div class="cols2">
+  <div class="card cpuB"><b>CPU</b> ძირითადად პასუხისმგებელია სისტემის უნივერსალურ გამოთვლით და ლოგიკურ ოპერაციებზე.</div>
+  <div class="card gpuB"><b>GPU</b> სპეციალიზებულია გრაფიკისა და დიდი რაოდენობის პარალელური ოპერაციების დამუშავებაში.</div>
+ </div>
+ <p style="margin-top:1em">კომპიუტერის შერჩევისას არ არის საკმარისი მხოლოდ ერთი მონაცემის (GHz ან ბირთვების) ნახვა. საჭიროა მთლიანი შეფასება:</p>
+ <div class="chips"><span class="chip">მოდელი</span><span class="chip">არქიტექტურა</span><span class="chip">ბირთვები</span><span class="chip">ნაკადები</span><span class="chip">სიხშირე</span><span class="chip">Cache</span><span class="chip">TDP</span><span class="chip">გაგრილება</span><span class="chip">საჭიროება</span><span class="chip">ფასი</span></div>
+ <p class="quote">„საუკეთესო კომპონენტი ყოველთვის არ არის ყველაზე ძვირი ან ყველაზე ძლიერი — საუკეთესოა ის, რომელიც კონკრეტული მომხმარებლის საჭიროებასა და ბიუჯეტს ყველაზე კარგად შეესაბამება.“</p>
+</section>
+</main>
+</div>
+<nav class="nav" aria-label="სლაიდების ნავიგაცია">
+ <button class="big" id="prev">← წინა</button>
+ <span id="cnt">1 / 1</span>
+ <button class="big" id="next">შემდეგი →</button>
+</nav>
+<div id="tip"></div>
+<style>.hs.on .hs{opacity:1!important}</style>
+<script>
+(()=>{
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+const tx=(p,x,y,s,cls,anchor='middle')=>{const t=el('text',{x,y,'text-anchor':anchor,class:cls||''},p);t.textContent=s;return t};
+const hsG=(p,t,d)=>el('g',{class:'hs','data-t':t,'data-d':d},p);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* slide 3 cores */
+(()=>{const g=document.getElementById('coresA');let n=1;
+ for(const y of [92,246])for(const x of [115,199,283]){
+  const c=hsG(g,'ბირთვი (Core) '+n,'ფიზიკური დამამუშავებელი ბირთვი. თითოეულს აქვს საკუთარი L1 და L2 Cache.');
+  el('rect',{class:'o',x,y,width:72,height:74,rx:5,fill:'var(--cpu-soft)',stroke:'var(--cpu)','stroke-width':2},c);
+  tx(c,x+28,y+40,'Core '+n,'sm lb');
+  const l1=hsG(c,'L1 Cache','ბირთვის შიგნით, ყველაზე სწრაფი და პატარა (~32–80 KB). ინახავს იმ მონაცემებს, რომლებიც ბირთვს ახლავე სჭირდება.');
+  el('rect',{class:'o',x:x+50,y:y+6,width:17,height:16,rx:2,fill:'var(--cpu)'},l1);
+  const l2=hsG(c,'L2 Cache','თითო ბირთვის L2 — L1-ზე დიდი (~0.5–2 MB) და ოდნავ ნელი.');
+  el('rect',{class:'o',x:x+6,y:y+54,width:60,height:14,rx:2,fill:'var(--cache)'},l2);
+  tx(l2,x+36,y+65,'L2','sm');n++}})();
+
+/* slide 9 cores/threads */
+(()=>{const tg=document.getElementById('tasks');
+ ['ბრაუზერი','მუსიკა','Word','თამაში','ანტივირუსი','ჩატი'].forEach((s,i)=>{el('rect',{x:20,y:62+i*45,width:114,height:34,rx:7,fill:'var(--panel)',stroke:'var(--line)'},tg);tx(tg,77,84+i*45,s,'sm')});
+ const g=document.getElementById('ctCores');let n=1;
+ for(const y of [24,188])for(const x of [202,330,458]){
+  const c=hsG(g,'ფიზიკური ბირთვი '+n,'რეალური, ფიზიკური დამამუშავებელი ერთეული კრისტალზე. ამ პროცესორს 6 ასეთი აქვს.');
+  el('rect',{class:'o',x,y,width:118,height:150,rx:10,fill:'var(--cpu-soft)',stroke:'var(--cpu)','stroke-width':2},c);
+  tx(c,x+59,y+30,'Core '+n,'lb');
+  [0,1].forEach(k=>{const t=hsG(c,'ნაკადი (Thread) '+(k+1)+' — Core '+n,'ლოგიკური ნაკადი. ტექნოლოგია SMT / Hyper-Threading ერთ ბირთვს ორი ნაკადის დამუშავების საშუალებას აძლევს: როცა ერთი ნაკადი მონაცემს ელოდება, ბირთვი მეორეზე მუშაობს.');
+   el('rect',{class:'o',x:x+12,y:y+46+k*48,width:94,height:36,rx:6,fill:'var(--cpu)',opacity:k?.6:.9},t);
+   tx(t,x+59,y+69+k*48,'Thread '+(n*2-1+k),'lw sm')});n++}})();
+
+/* slide 10 gauge */
+(()=>{const g=document.getElementById('gauge'),cx=300,cy=250,r=180;
+ const P=(v,rr=r)=>{const a=Math.PI+(v/5)*Math.PI;return[cx+rr*Math.cos(a),cy+rr*Math.sin(a)]};
+ const arc=(v1,v2)=>{const a=P(v1),b=P(v2);return`M${a[0].toFixed(1)} ${a[1].toFixed(1)} A${r} ${r} 0 0 1 ${b[0].toFixed(1)} ${b[1].toFixed(1)}`};
+ el('path',{d:arc(0,5),stroke:'var(--panel2)','stroke-width':36,fill:'none'},g);
+ [[0.4,2,'var(--muted)','უმოქმედო რეჟიმი','როცა დატვირთვა მცირეა, პროცესორი სიხშირეს ამცირებს — ენერგიის დაზოგვა და ნაკლები სითბო.'],
+  [2,3.2,'var(--cpu)','Base Clock ზონა (3.2 GHz-მდე)','ჩვეულებრივი მუშაობის რეჟიმი. Base Clock — საბაზისო სიხშირე, რომელსაც მწარმოებელი გარანტიას აძლევს.'],
+  [3.2,4.6,'var(--gpu)','Boost Clock ზონა (4.6 GHz-მდე)','მაღალი დატვირთვისას, თუ ტემპერატურა და ენერგია იძლევა საშუალებას, პროცესორი სიხშირეს ავტომატურად ზრდის.'],
+  [4.6,5,'var(--hot)','ზღვარს მიღმა — ოვერკლოკი','მწარმოებლის ზღვარზე მაღალი სიხშირე. შესაძლებელია მხოლოდ განბლოკილ (K/X) მოდელებზე და კარგ გაგრილებაზე.']
+ ].forEach(([a,b,c,t,d])=>{const h=hsG(g,t,d);el('path',{class:'o',d:arc(a,b),stroke:c,'stroke-width':36,fill:'none'},h)});
+ for(let v=0;v<=5;v++){const p=P(v,r+32);tx(g,p[0],p[1]+5,v+'','sm mu')}
+ [[3.2,'Base'],[4.6,'Boost']].forEach(([v,s])=>{const a=P(v,r-20),b=P(v,r+20);el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:'var(--ink)','stroke-width':3},g);const t=P(v,r-44);tx(g,t[0],t[1]+5,s,'sm lb')});
+ tx(g,300,200,'GHz','mu');
+ const needle=document.getElementById('needle'),ghz=document.getElementById('ghz'),wave=document.getElementById('wave');
+ const set=v=>{needle.style.transform=`rotate(${(v-2.5)/5*180}deg)`;ghz.textContent=v+' GHz';
+  const cyc=Math.max(2,Math.round(v*3)),w=540/cyc;let d='M30 360';for(let i=0;i<cyc;i++){const x=30+i*w;d+=` V330 H${(x+w/2).toFixed(1)} V360 H${(x+w).toFixed(1)}`}wave.setAttribute('d',d)};
+ set(3.2);
+ document.querySelectorAll('#loadSeg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#loadSeg button').forEach(x=>x.setAttribute('aria-pressed',x===b));set(+b.dataset.v)});
+})();
+
+/* slide 15 gpu grid */
+const gpuCells=[];(()=>{const g=document.getElementById('gpuGrid');
+ for(let r=0;r<16;r++)for(let c=0;c<16;c++)gpuCells.push(el('rect',{x:312+c*15.6,y:48+r*15.6,width:12,height:12,rx:2,fill:'var(--gpu)',opacity:.55},g))})();
+
+/* slide 17 GPCs + CUDA grid */
+(()=>{const g=document.getElementById('gpcs');
+ [[24,36],[190,36],[24,216],[190,216]].forEach(([x,y],i)=>{
+  const h=hsG(g,'GPC — გრაფიკული კლასტერი '+(i+1),'Graphics Processing Cluster: რამდენიმე SM ბლოკის ჯგუფი საერთო გრაფიკული რესურსებით.');
+  el('rect',{class:'o',x,y,width:156,height:148,rx:6,fill:'var(--panel)',opacity:.18,stroke:'var(--gpu)'},h);
+  for(let r=0;r<2;r++)for(let c=0;c<3;c++){const hl=i===0&&r===0&&c===1;
+   el('rect',{x:x+8+c*49,y:y+10+r*68,width:42,height:60,rx:3,fill:'var(--gpu)',opacity:hl?1:.7,stroke:hl?'var(--hot)':'none','stroke-width':3},h);
+   el('rect',{x:x+14+c*49,y:y+18+r*68,width:30,height:30,fill:'var(--gpu-soft)',opacity:.6},h)}});
+ const cg=document.getElementById('cudaGrid');
+ for(let r=0;r<6;r++)for(let c=0;c<8;c++)el('rect',{class:r+c?'':'o',x:416+c*25,y:80+r*23,width:21,height:19,rx:2,fill:'var(--gpu-soft)',stroke:'var(--gpu)'},cg);
+})();
+
+/* slide 19 NN */
+(()=>{const L=[[70,4],[230,6],[370,6],[530,2]].map(([x,n])=>Array.from({length:n},(_,i)=>[x,170+(i-(n-1)/2)*48]));
+ const lk=document.getElementById('nnLinks');
+ for(let l=0;l<3;l++)for(const a of L[l])for(const b of L[l+1])el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1]},lk);
+ const draw=(id,pts,fill)=>{const g=document.getElementById(id);pts.forEach(p=>el('circle',{cx:p[0],cy:p[1],r:15,fill,stroke:'var(--panel)','stroke-width':3},g))};
+ draw('nnIn',L[0],'var(--cpu)');draw('nnHid',[...L[1],...L[2]],'var(--gpu)');draw('nnOut',L[3],'var(--hot)')})();
+
+/* ports pins */
+(()=>{const d=document.getElementById('dviPins');for(let r=0;r<3;r++)for(let i=0;i<8;i++)el('rect',{x:470+i*10,y:72+r*13,width:5,height:5},d);
+ el('rect',{x:552,y:82,width:6,height:16},d);
+ const v=document.getElementById('vgaPins');[[604,80,14],[610,92,12],[614,104,10.5]].forEach(([x,y,s])=>{for(let i=0;i<5;i++)el('circle',{cx:x+i*s,cy:y,r:3},v)})})();
+
+/* PSU calc */
+(()=>{const c=document.getElementById('cpuR'),g=document.getElementById('gpuR');
+ const up=()=>{const sys=+c.value+ +g.value+75;const psu=Math.max(400,Math.ceil(sys*1.4/50)*50);
+  cpuW.textContent=c.value;gpuW.textContent=g.value;sysW.textContent=sys;psuW.textContent=psu+' W'};
+ c.oninput=g.oninput=up;up()})();
+
+/* bottleneck */
+(()=>{const c=document.getElementById('bnC'),g=document.getElementById('bnG');
+ const up=()=>{const C=+c.value,G=+g.value,f=Math.min(C,G);
+  bnCv.textContent=C+' კადრი/წმ';bnGv.textContent=G+' კადრი/წმ';
+  bnCi.style.width=C/240*100+'%';bnGi.style.width=G/240*100+'%';bnFps.textContent=f+' FPS';
+  bnMsg.textContent=C<G*.85?'🔴 CPU ზღუდავს სისტემას (CPU Bottleneck) — GPU-ს სამუშაო აკლია და ელოდება.':G<C*.85?'🟠 GPU ზღუდავს სისტემას (GPU Bottleneck) — CPU-ს შეუძლია მეტი, მაგრამ GPU ვერ ასწრებს ხატვას.':'🟢 დაბალანსებულია — ორივე კომპონენტი კარგად გამოიყენება.';
+  bnMsg.style.color=C<G*.85?'var(--hot)':G<C*.85?'var(--gpu-ink)':'var(--sub)'};
+ c.oninput=g.oninput=up;up()})();
+
+/* use cases */
+(()=>{const U={
+ 'ოფისი / სწავლა':['Core i3 / Ryzen 3 ან ჩაშენებული გრაფიკით Ryzen 5 G — 4–6 ბირთვი საკმარისია.','ცალკე ვიდეო ბარათი არ არის საჭირო — iGPU საკმარისია.','დაზოგილი თანხა სჯობს SSD-ს და RAM-ს მოხმარდეს.'],
+ 'პროგრამირება':['6–8 ბირთვი (Core i5 / Ryzen 5–7) — კოდის კომპილაცია მრავალბირთვიანია.','iGPU ან საწყისი ვიდეო ბარათი. AI/ML პროგრამირებისთვის — GPU მეტი VRAM-ით.','RAM: 16 GB ან მეტი.'],
+ 'თამაშები':['6–8 ბირთვი მაღალი სიხშირით და დიდი L3 Cache-ით (Core i5 / Ryzen 5–7).','ძლიერი Dedicated GPU, 8 GB+ VRAM — ბიუჯეტის ყველაზე დიდი ნაწილი.','GPU ირჩევა მონიტორის გარჩევადობისა და Hz-ის მიხედვით; დაიცავით ბალანსი (Bottleneck).'],
+ 'ვიდეომონტაჟი':['8+ ბირთვი / 16+ ნაკადი (Core i7 / Ryzen 7–9).','საშუალო–მაღალი კლასის GPU ვიდეოს აპარატული კოდირებით, 8–12 GB VRAM.','RAM: 32 GB, სწრაფი SSD.'],
+ '3D მოდელირება':['ბევრი ბირთვი რენდერისთვის (Core i9 / Ryzen 9, Threadripper).','მაღალი კლასის GPU Ray Tracing-ით და 12 GB+ VRAM.','GPU რენდერი ხშირად CPU რენდერზე ბევრად სწრაფია.'],
+ 'AI':['საშუალო–მაღალი კლასი (Core i5–i7 / Ryzen 5–7).','GPU AI ბლოკებით და რაც შეიძლება მეტი VRAM (12–24 GB).','VRAM-ის მოცულობა განსაზღვრავს, რა ზომის მოდელი ჩაეტევა.']};
+ const seg=document.getElementById('useSeg');
+ Object.keys(U).forEach((k,i)=>{const b=document.createElement('button');b.textContent=k;b.setAttribute('aria-pressed',i===0);
+  b.onclick=()=>{seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));useC.textContent=U[k][0];useG.textContent=U[k][1];useN.textContent='💡 '+U[k][2]};
+  seg.appendChild(b);if(!i)b.click()})})();
+
+/* checklists */
+(()=>{const mk=(id,arr)=>{const box=document.getElementById(id);arr.forEach(s=>{const l=document.createElement('label');l.innerHTML='<input type="checkbox"> <span></span>';l.querySelector('span').textContent=s;box.appendChild(l)})};
+ mk('chkCpu',['მწარმოებელი','სრული მოდელი','თაობა','ბირთვების რაოდენობა','ნაკადების რაოდენობა','Base Clock','Boost Clock','L1 Cache','L2 Cache','L3 Cache','არქიტექტურა','წარმოების ტექნოლოგია (nm)','TDP','Socket','Integrated Graphics — აქვს თუ არა','ფასი']);
+ mk('chkGpu',['მწარმოებელი','სრული მოდელი','GPU-ის მოდელი','არქიტექტურა','დამუშავების ბირთვების რაოდენობა','Ray Tracing-ის მხარდაჭერა','AI შესაძლებლობები','გაგრილების ტიპი','ენერგომოხმარება','ვიდეო გამოსასვლელები','მაქსიმალური გარჩევადობა','მხარდაჭერილი Refresh Rate','ფასი'])})();
+
+/* criteria */
+(()=>{const box=document.getElementById('crit');
+ [['თეორიული ცოდნა',20],['ტერმინოლოგიის სწორად გამოყენება',10],['მახასიათებლების სწორად მოძიება',15],['CPU-ების შედარება',15],['GPU-ების შედარება',15],['ანალიზი და დასკვნა',10],['არჩევანის დასაბუთება',10],['პრეზენტაციის ხარისხი',5]].forEach(([s,p],i)=>{
+  const d=document.createElement('div');d.style.margin='8px 0';
+  d.innerHTML=`<div style="display:flex;justify-content:space-between;font-weight:700"><span></span><span>${p}%</span></div><div class="meter" style="height:14px"><i style="width:${p*5}%;background:${i%2?'var(--gpu)':'var(--cpu)'}"></i></div>`;
+  d.querySelector('span').textContent=s;box.appendChild(d)})})();
+
+/* flips */
+(()=>{const Q=[['რა არის CPU?','ცენტრალური დამამუშავებელი პროცესორი, რომელიც ასრულებს კომპიუტერის ძირითად გამოთვლით და ლოგიკურ ოპერაციებს.'],
+ ['რა არის GPU?','გრაფიკული პროცესორი, რომელიც განსაკუთრებით ეფექტურია გრაფიკისა და პარალელური გამოთვლების დამუშავებაში.'],
+ ['რა განსხვავებაა CPU-სა და GPU-ს შორის?','CPU უნივერსალური დამუშავებისთვისაა, GPU — დიდი რაოდენობის პარალელური ოპერაციებისთვის.'],
+ ['რას ნიშნავს Core?','პროცესორის ფიზიკური დამამუშავებელი ბირთვი.'],
+ ['რას ნიშნავს Thread?','ლოგიკური დამუშავების ნაკადი, რომლითაც პროცესორი სამუშაოს ამუშავებს.'],
+ ['რა არის Cache?','ძალიან სწრაფი მეხსიერება, რომელიც პროცესორს ხშირად საჭირო მონაცემებზე სწრაფ წვდომაში ეხმარება.'],
+ ['რა განსხვავებაა L1, L2 და L3-ს შორის?','L1 ყველაზე სწრაფი და მცირეა, L2 უფრო დიდია, L3 კიდევ უფრო დიდი, საერთო და შედარებით ნელია.'],
+ ['რა არის TDP?','თერმულ/ენერგეტიკულ დიზაინთან დაკავშირებული მაჩვენებელი (W), მნიშვნელოვანი გაგრილების შერჩევისას.'],
+ ['რა არის iGPU?','პროცესორში ან სისტემურ პლატფორმაში ინტეგრირებული გრაფიკული პროცესორი.'],
+ ['რა არის Dedicated GPU?','ცალკე ვიდეო ბარათი, რომელიც გრაფიკული და პარალელური გამოთვლებისთვის გამოიყენება.']];
+ const box=document.getElementById('flips');
+ Q.forEach(([q,a],i)=>{const b=document.createElement('button');b.className='flip';b.setAttribute('aria-expanded','false');
+  b.innerHTML='<div class="q"></div><div class="a"></div>';b.querySelector('.q').textContent=(i+1)+'. '+q;b.querySelector('.a').textContent=a;
+  b.onclick=()=>b.setAttribute('aria-expanded',b.getAttribute('aria-expanded')!=='true');box.appendChild(b)})})();
+
+/* hotspots */
+const tip=document.getElementById('tip');let cur=null,touchT;
+document.querySelectorAll('.hs').forEach(h=>{if(!h.hasAttribute('tabindex'))h.setAttribute('tabindex','0')});
+const scopeOf=h=>h.closest('.fig')||h.closest('.slide');
+function on(h,x,y){if(cur&&cur!==h)off(cur);cur=h;h.classList.add('on');const s=scopeOf(h);s.classList.add('act');
+ const cap=(h.closest('.fig')&&h.closest('.fig').querySelector('.cap'))||h.closest('.slide').querySelector('.cap');
+ if(cap){cap.innerHTML='<b></b><span></span>';cap.querySelector('b').textContent=h.dataset.t;cap.querySelector('span').textContent=h.dataset.d||''}
+ tip.textContent=h.dataset.t;tip.classList.add('show');if(x!=null)place(x,y);else{const r=h.getBoundingClientRect();place(r.left+r.width/2,r.top)}}
+function off(h){h.classList.remove('on');const s=scopeOf(h);if(s&&!s.querySelector('.hs.on'))s.classList.remove('act');if(cur===h){cur=null;tip.classList.remove('show')}}
+function place(x,y){const w=tip.offsetWidth,ww=innerWidth;tip.style.left=Math.min(x,ww-w-24)+'px';tip.style.top=y+'px'}
+document.addEventListener('pointerover',e=>{const h=e.target.closest('.hs');if(h)on(h,e.clientX,e.clientY)});
+document.addEventListener('pointerout',e=>{const h=e.target.closest('.hs');if(h&&!h.contains(e.relatedTarget)&&e.pointerType==='mouse')off(h)});
+document.addEventListener('pointermove',e=>{if(cur&&e.pointerType==='mouse')place(e.clientX,e.clientY)});
+document.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'){const h=e.target.closest('.hs');if(h){on(h,e.clientX,e.clientY);clearTimeout(touchT);touchT=setTimeout(()=>tip.classList.remove('show'),1800)}else if(cur)off(cur)}});
+document.addEventListener('focusin',e=>{const h=e.target.closest&&e.target.closest('.hs');if(h&&e.target===h)on(h)});
+document.addEventListener('focusout',e=>{if(e.target.classList&&e.target.classList.contains('hs'))off(e.target)});
+
+/* deck */
+const slides=[...document.querySelectorAll('.slide')];let idx=0;
+slides.forEach((s,i)=>{const n=s.querySelector('.no');if(n)n.textContent=String(i+1).padStart(2,'0');
+ });
+const side=document.getElementById('side'),links=[];
+const groups=[[0,'შესავალი','var(--muted)'],[2,'პროცესორი — CPU','var(--cpu)'],[14,'ვიდეო ბარათი — GPU','var(--gpu)'],[25,'CPU და GPU ერთად','var(--hot)'],[28,'პრაქტიკა და შეჯამება','var(--ink)']];
+slides.forEach((s,i)=>{const gr=groups.find(g=>g[0]===i);
+ if(gr){const h=document.createElement('h4');h.textContent=gr[1];h.style.setProperty('--c',gr[2]);side.appendChild(h)}
+ const a=document.createElement('a');a.href='#s'+(i+1);a.innerHTML='<span></span><b style="font-weight:inherit"></b>';
+ a.querySelector('span').textContent=i+1;a.querySelector('b').textContent=s.dataset.title;
+ a.onclick=e=>{e.preventDefault();go(i);document.body.classList.remove('sideopen')};side.appendChild(a);links.push(a)});
+const seen=new Set();
+function go(i){idx=Math.max(0,Math.min(slides.length-1,i));slides.forEach((s,k)=>s.classList.toggle('active',k===idx));
+ cnt.textContent=(idx+1)+' / '+slides.length;bar.style.width=((idx+1)/slides.length*100)+'%';prev.disabled=idx===0;next.disabled=idx===slides.length-1;
+ seen.add(idx);links.forEach((a,k)=>{a.classList.toggle('cur',k===idx);a.classList.toggle('seen',seen.has(k));if(k===idx)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});links[idx].scrollIntoView({block:'nearest'});
+ if(cur)off(cur);history.replaceState(null,'','#s'+(idx+1));slides[idx].scrollTop=0}
+prev.onclick=()=>go(idx-1);next.onclick=()=>go(idx+1);
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(+b.dataset.go));
+document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();go(idx+1)}
+ else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(idx-1)}
+ else if(e.key==='Home')go(0);else if(e.key==='End')go(slides.length-1);else if(e.key==='Escape')document.body.classList.remove('sideopen')});
+let sx=null,sy=0;document.getElementById('deck').addEventListener('touchstart',e=>{if(e.target.closest('input,.hs'))return;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+document.getElementById('deck').addEventListener('touchend',e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5)go(idx+(dx<0?1:-1));sx=null});
+tocBtn.onclick=()=>{if(innerWidth<=1000)document.body.classList.toggle('sideopen');else document.body.classList.toggle('noside')};scrim.onclick=()=>document.body.classList.remove('sideopen');
+themeBtn.onclick=()=>{const r=document.documentElement,cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark'};
+fsBtn.onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(e){}};
+const m=location.hash.match(/^#s(\d+)$/);go(m?+m[1]-1:0);
+
+/* animations */
+const balls=[...document.querySelectorAll('.ball')];
+function loop(t){const s=slides[idx];
+ if(balls.length&&s.contains(balls[0])){balls.forEach(b=>{const hz=+b.dataset.hz,q=Math.floor(t/1000*hz)/hz,w=b.parentElement.clientWidth-28,ph=(q%2)/2,p=ph<.5?ph*2:2-ph*2;b.style.transform=`translateX(${p*w}px)`})}
+ requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+if(!reduce)setInterval(()=>{if(!slides[idx].contains(gpuCells[0]))return;gpuCells.forEach(c=>c.setAttribute('opacity',Math.random()<.35?1:.45))},450);
+})();
+</script>
+</body>
+</html>
